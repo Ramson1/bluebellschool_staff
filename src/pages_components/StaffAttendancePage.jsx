@@ -12,16 +12,16 @@ import "../styles/AdminPages.css";
 //
 // Attendance is captured school-wide by the admin portal / the mobile
 // attendance app (QR or manual sign-in). Every check-in writes ONE row to
-// jmis_attendance per pupil per day (with check_in_time / check_out_time and
+// bluebell_attendance per pupil per day (with check_in_time / check_out_time and
 // the current session + term). Teachers here no longer TAKE attendance — they
 // simply VIEW those records for the classes they are FORM teacher of and see
 // each pupil's attendance COUNT for the selected term, plus the daily log.
 // (Attendance writes were already class-teacher-only via guardWrite; the read
 // side follows the same policy — subject teachers get no attendance view.)
 //
-// A pupil's "days present" for a term = the number of jmis_attendance rows for
+// A pupil's "days present" for a term = the number of bluebell_attendance rows for
 // them in that term (matching how Result.jsx derives attendance). Days absent
-// are estimated from jmis_settings.schoolOpened when that figure is available.
+// are estimated from bluebell_settings.schoolOpened when that figure is available.
 
 const TERMS = ["1st Term", "2nd Term", "3rd Term"];
 
@@ -41,7 +41,7 @@ export default function StaffAttendancePage() {
   const [cls, setCls] = useState("");
   const [term, setTerm] = useState(scope?.term || "");
   const [roster, setRoster] = useState([]);   // students enrolled in the class
-  const [records, setRecords] = useState([]); // jmis_attendance rows (class + term)
+  const [records, setRecords] = useState([]); // bluebell_attendance rows (class + term)
   const [schoolDays, setSchoolDays] = useState(null); // schoolOpened days this term
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -65,9 +65,9 @@ export default function StaffAttendancePage() {
     if (!cls || !scope?.mayViewRoster?.(cls)) { setRoster([]); setRecords([]); return; }
     setLoading(true);
     Promise.all([
-      whereClassIn(supabase.from("jmis_student").select("id, name, class"), "class", [cls]),
-      whereClassIn(supabase.from("jmis_attendance").select("*"), "class", [cls]).order("date", { ascending: false }),
-      supabase.from("jmis_settings").select("schoolOpened, term, session").limit(1),
+      whereClassIn(supabase.from("bluebell_student").select("id, name, class"), "class", [cls]),
+      whereClassIn(supabase.from("bluebell_attendance").select("*"), "class", [cls]).order("date", { ascending: false }),
+      supabase.from("bluebell_settings").select("schoolOpened, term, session").limit(1),
     ])
       .then(([stu, att, set]) => {
         if (stu.error) throw stu.error;

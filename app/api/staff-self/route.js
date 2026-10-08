@@ -2,13 +2,13 @@ import { NextResponse } from 'next/server';
 import { requireStaffCaller, serviceClient } from '@/src/utils/serverAuth.js';
 
 // Columns a staff member may change on their own profile — everything else on
-// jmis_staff is dropped before the write, so this endpoint cannot be used to
+// bluebell_staff is dropped before the write, so this endpoint cannot be used to
 // alter a login email, a class/subject assignment, an account status, a staff
 // number or the auth linkage, whatever the request body claims to contain.
 const SELF_EDITABLE = ['name', 'sex', 'address', 'phone', 'designation', 'department', 'profile_pic', 'date_of_appointment'];
 const SEXES = ['', 'Male', 'Female'];
 const DEPARTMENTS = ['Academic', 'Non-Academic'];
-// Columns that are dates rather than free text on jmis_staff. They come back
+// Columns that are dates rather than free text on bluebell_staff. They come back
 // from an <input type="date"> as 'YYYY-MM-DD' (or '' when cleared) and are
 // stored in a DATE column, so they skip the text rule below and are cleared
 // to null instead of being written as an empty string, which Postgres rejects.
@@ -21,7 +21,7 @@ const DATE_FIELDS = ['date_of_appointment'];
 //    the Profile page. Runs on the service-role key server-side; the caller must
 //    be an active staff profile linked to their auth user, and only their own
 //    account is ever touched. Signing in with the full name keeps working
-//    regardless (resolved via jmis_staff), so a mistyped email is never a
+//    regardless (resolved via bluebell_staff), so a mistyped email is never a
 //    lock-out.
 //  { action: 'update_profile', profile } → edit their own details, limited to
 //    SELF_EDITABLE. Class/subject assignment and email stay the admin's job.
@@ -42,7 +42,7 @@ export async function PATCH(request) {
     // email match for records created outside this flow). Carries every
     // self-editable column so the update branch can diff against what is stored.
     const findOwn = async () => admin
-      .from('jmis_staff')
+      .from('bluebell_staff')
       .select(`id, email, status, ${SELF_EDITABLE.join(', ')}`)
       .or(`auth_user_id.eq.${caller.id},email.eq.${caller.email}`)
       .limit(1)
@@ -60,7 +60,7 @@ export async function PATCH(request) {
       // failure on their Profile page.
       let cleared = false;
       try {
-        const { error } = await admin.from('jmis_staff_credentials').delete().eq('staff_id', own.id);
+        const { error } = await admin.from('bluebell_staff_credentials').delete().eq('staff_id', own.id);
         cleared = !error;
       } catch { /* store not created yet — nothing to clear */ }
       return NextResponse.json({ ok: true, cleared });
@@ -76,7 +76,7 @@ export async function PATCH(request) {
       }
 
       // Keep only the permitted columns, and only text values (every editable
-      // column on jmis_staff is text apart from the DATE_FIELDS below). Unknown
+      // column on bluebell_staff is text apart from the DATE_FIELDS below). Unknown
       // keys are silently dropped.
       const src = body.profile || {};
       const patch = {};
@@ -116,7 +116,7 @@ export async function PATCH(request) {
         // signing in, so two staff sharing one name breaks login for both.
         // Same reasoning as the email clash check below.
         const { data: nameClash } = await admin
-          .from('jmis_staff')
+          .from('bluebell_staff')
           .select('id')
           .ilike('name', patch.name)
           .neq('id', own.id)
@@ -155,7 +155,7 @@ export async function PATCH(request) {
       }
 
       const { data: updated, error } = await admin
-        .from('jmis_staff')
+        .from('bluebell_staff')
         .update(patch)
         .eq('id', own.id)
         .select()
@@ -185,7 +185,7 @@ export async function PATCH(request) {
 
     // Reject emails already used by another staff profile
     const { data: clash } = await admin
-      .from('jmis_staff')
+      .from('bluebell_staff')
       .select('id')
       .ilike('email', email)
       .neq('id', staff.id)
@@ -204,9 +204,9 @@ export async function PATCH(request) {
     }
 
     // Keep the profile + teacher-access list in sync with the new login email
-    await admin.from('jmis_staff').update({ email }).eq('id', staff.id);
+    await admin.from('bluebell_staff').update({ email }).eq('id', staff.id);
     try {
-      await admin.from('jmis_teacherauth').update({ email }).eq('email', (staff.email || '').toLowerCase());
+      await admin.from('bluebell_teacherauth').update({ email }).eq('email', (staff.email || '').toLowerCase());
     } catch { /* non-fatal */ }
 
     return NextResponse.json({ ok: true, email });

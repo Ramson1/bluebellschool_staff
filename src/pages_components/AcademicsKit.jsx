@@ -227,8 +227,8 @@ export function makeAcademicsPage(config) {
         const opts = subjectsFor(payload.class);
         payload.subject = opts.find((s) => normSub(s) === normSub(payload.subject)) || payload.subject;
       }
-      // Attribute the record to the writer (jmis_notes → uploaded_by,
-      // jmis_assignments → created_by). The network guard refuses a payload
+      // Attribute the record to the writer (bluebell_notes → uploaded_by,
+      // bluebell_assignments → created_by). The network guard refuses a payload
       // naming another teacher, and refuses a new row with no author at all,
       // so an account without an email fails loudly instead of storing a row
       // nobody owns.

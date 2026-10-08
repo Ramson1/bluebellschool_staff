@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Shared chat data layer (parent <-> school). Used by the Student portal, the
 // Staff portal and the Admin dashboard against the SAME Supabase project.
-// Tables + columns are defined in bluebellschool/src/api/jmis_chat_setup.sql.
+// Tables + columns are defined in bluebellschool/src/api/bluebell_chat_setup.sql.
 //
 // A conversation is a 2-party thread between one student/parent and one
 // "school side" participant (a class teacher, or the general Admin/Office).
@@ -29,10 +29,10 @@ export const pairKey = (studentId, schoolType, teacherStaffId) =>
 export async function openConversation(c) {
   const pk = pairKey(String(c.studentId), c.schoolType, c.teacherStaffId ? String(c.teacherStaffId) : "");
   const { data: existing } = await supabase
-    .from("jmis_chat_conversations").select("*").eq("pair_key", pk).maybeSingle();
+    .from("bluebell_chat_conversations").select("*").eq("pair_key", pk).maybeSingle();
   if (existing) return existing;
   const { data: inserted, error } = await supabase
-    .from("jmis_chat_conversations")
+    .from("bluebell_chat_conversations")
     .insert({
       pair_key: pk,
       student_id: String(c.studentId),
@@ -46,7 +46,7 @@ export async function openConversation(c) {
   if (error) {
     // Another tab may have created it concurrently — refetch before failing.
     const { data: again } = await supabase
-      .from("jmis_chat_conversations").select("*").eq("pair_key", pk).maybeSingle();
+      .from("bluebell_chat_conversations").select("*").eq("pair_key", pk).maybeSingle();
     if (again) return again;
     throw error;
   }
@@ -54,7 +54,7 @@ export async function openConversation(c) {
 }
 
 export async function listConversations(filter) {
-  let q = supabase.from("jmis_chat_conversations").select("*");
+  let q = supabase.from("bluebell_chat_conversations").select("*");
   if (filter?.studentId) q = q.eq("student_id", String(filter.studentId));
   // A staff member sees every thread addressed to them: parent<->teacher
   // (school_type 'teacher') AND office<->staff from the admin dashboard
@@ -71,7 +71,7 @@ export async function listConversations(filter) {
 
 export async function getMessages(conversationId) {
   const { data, error } = await supabase
-    .from("jmis_chat_messages").select("*")
+    .from("bluebell_chat_messages").select("*")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true })
     .limit(500);
@@ -81,7 +81,7 @@ export async function getMessages(conversationId) {
 
 export async function sendMessage({ conversationId, me, body, attachment, replyToId }) {
   const { data, error } = await supabase
-    .from("jmis_chat_messages")
+    .from("bluebell_chat_messages")
     .insert({
       conversation_id: conversationId,
       sender_side: me.side,
@@ -96,13 +96,13 @@ export async function sendMessage({ conversationId, me, body, attachment, replyT
     })
     .select().single();
   if (error) throw error;
-  await supabase.from("jmis_chat_conversations").update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
+  await supabase.from("bluebell_chat_conversations").update({ updated_at: new Date().toISOString() }).eq("id", conversationId);
   return data;
 }
 
 export async function editMessage(id, body) {
   const { data, error } = await supabase
-    .from("jmis_chat_messages")
+    .from("bluebell_chat_messages")
     .update({ body: (body || "").trim(), edited_at: new Date().toISOString() })
     .eq("id", id).select().single();
   if (error) throw error;
@@ -111,7 +111,7 @@ export async function editMessage(id, body) {
 
 export async function deleteMessage(id) {
   const { error } = await supabase
-    .from("jmis_chat_messages")
+    .from("bluebell_chat_messages")
     .update({ deleted: true, body: "", attachment_url: null, attachment_name: null, attachment_mime: null, attachment_size: null })
     .eq("id", id);
   if (error) throw error;
@@ -138,17 +138,17 @@ export async function findClassTeachers(className) {
   const out = [];
   try {
     const { data: asg } = await supabase
-      .from("jmis_staff_assignments").select("staff_id")
+      .from("bluebell_staff_assignments").select("staff_id")
       .eq("assignment_type", "class_teacher").eq("class", className).limit(20);
     const ids = [...new Set((asg || []).map((a) => a.staff_id).filter(Boolean))].map(String);
     if (ids.length) {
-      const { data: staff } = await supabase.from("jmis_staff").select("id, name").in("id", ids);
+      const { data: staff } = await supabase.from("bluebell_staff").select("id, name").in("id", ids);
       (staff || []).forEach((s) => out.push({ staffId: String(s.id), name: s.name || "Class Teacher" }));
     }
   } catch (_) {/* ignore */}
   if (!out.length) {
     try {
-      const { data: staff } = await supabase.from("jmis_staff").select("id, name").eq("class_assigned", className).limit(10);
+      const { data: staff } = await supabase.from("bluebell_staff").select("id, name").eq("class_assigned", className).limit(10);
       (staff || []).forEach((s) => out.push({ staffId: String(s.id), name: s.name || "Class Teacher" }));
     } catch (_) {/* ignore */}
   }

@@ -64,13 +64,13 @@ const SESSION_TYPES = {
 // The three session types live in three separate tables; ownership is keyed by
 // table so a set is always matched against the row it came from.
 const tableForSession = (t) =>
-  t === 'completion' ? 'jmis_cbt_completion' : t === 'essay' ? 'jmis_cbt_essay' : 'jmis_cbtQuestions';
+  t === 'completion' ? 'bluebell_cbt_completion' : t === 'essay' ? 'bluebell_cbt_essay' : 'bluebell_cbtQuestions';
 
 // testing
 
 const CbtQuestions = () => {
   // Staff-portal authorization source of truth: a validated scope (populated
-  // from jmis_staff + jmis_staff_assignments and enforced by the ScopeGate
+  // from bluebell_staff + bluebell_staff_assignments and enforced by the ScopeGate
   // wrapper). The copied admin role tables are NOT the staff access list.
   const scope = useContext(StaffContext);
   const [user, setUser] = useState();
@@ -166,9 +166,9 @@ const CbtQuestions = () => {
     try {
       // Fetch from all three session type tables
       const [objectiveData, completionData, essayData] = await Promise.all([
-        supabase.from('jmis_cbtQuestions').select('*').order('created_at', { ascending: false }),
-        supabase.from('jmis_cbt_completion').select('*').order('created_at', { ascending: false }),
-        supabase.from('jmis_cbt_essay').select('*').order('created_at', { ascending: false })
+        supabase.from('bluebell_cbtQuestions').select('*').order('created_at', { ascending: false }),
+        supabase.from('bluebell_cbt_completion').select('*').order('created_at', { ascending: false }),
+        supabase.from('bluebell_cbt_essay').select('*').order('created_at', { ascending: false })
       ]);
 
       if (objectiveData.error) throw objectiveData.error;
@@ -218,8 +218,8 @@ const CbtQuestions = () => {
         
         // Fetch all required data in parallel
         const [teacherData, userData, devData] = await Promise.all([
-          supabase.from('jmis_teacherauth').select('email'),
-          supabase.from('jmis_userauth').select('email'),
+          supabase.from('bluebell_teacherauth').select('email'),
+          supabase.from('bluebell_userauth').select('email'),
           supabase.from('devauth').select('email')
         ]);
         
@@ -606,10 +606,10 @@ const CbtQuestions = () => {
 
     // Determine table based on session type
     const targetTable = questionToDelete.sessionType === 'objective' 
-      ? 'jmis_cbtQuestions' 
+      ? 'bluebell_cbtQuestions' 
       : questionToDelete.sessionType === 'completion' 
-        ? 'jmis_cbt_completion' 
-        : 'jmis_cbt_essay';
+        ? 'bluebell_cbt_completion' 
+        : 'bluebell_cbt_essay';
 
     // Ownership check before the delete: a colleague's set is untouchable here.
     const own = assertOwnership(scope, targetTable, questionToDelete);
@@ -740,7 +740,7 @@ Class: ${questionData.class}`;
         email: getCurrentUserEmail(),
         role: getAuditRole(),
         action: "cbt_question_update",
-        targetTable: 'jmis_cbtQuestions',
+        targetTable: 'bluebell_cbtQuestions',
         recordId: currentQuestionId,
         details: { questionText: updateData?.questionText },
       });
@@ -821,10 +821,10 @@ ${questionsList}`;
       
       // Determine target table based on session type
       const targetTable = sessionType === 'objective' 
-        ? 'jmis_cbtQuestions' 
+        ? 'bluebell_cbtQuestions' 
         : sessionType === 'completion' 
-          ? 'jmis_cbt_completion' 
-          : 'jmis_cbt_essay';
+          ? 'bluebell_cbt_completion' 
+          : 'bluebell_cbt_essay';
       
       const newQuestionData = {
         subject: newSubject,
@@ -1241,7 +1241,7 @@ ${questionsList}`;
                   }
                   try {
                     const { error } = await supabase
-                      .from('jmis_cbtQuestions')
+                      .from('bluebell_cbtQuestions')
                       .delete()
                       .not('id', 'is', null);
                     if (error) {
@@ -1259,7 +1259,7 @@ ${questionsList}`;
                       email: currentUserEmail,
                       role: getAuditRole(),
                       action: "cbt_questions_delete_all",
-                      targetTable: 'jmis_cbtQuestions',
+                      targetTable: 'bluebell_cbtQuestions',
                     });
                   } catch (error) {
                     toast.error('Failed to delete all CBT questions');

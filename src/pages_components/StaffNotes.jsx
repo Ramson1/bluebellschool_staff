@@ -6,8 +6,8 @@ import { makeAcademicsPage } from "./AcademicsKit.jsx";
 
 // Lesson notes / documents shared with a class (+subject).
 const NotesPage = makeAcademicsPage({
-  table: "jmis_notes",
-  // jmis_notes has no created_by column — the author lives in uploaded_by.
+  table: "bluebell_notes",
+  // bluebell_notes has no created_by column — the author lives in uploaded_by.
   authorField: "uploaded_by",
   title: "Notes",
   icon: RiBookOpenLine,

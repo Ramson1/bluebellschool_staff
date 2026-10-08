@@ -1,7 +1,7 @@
 // Shared role helpers for new feature pages.
 // Existing pages keep their inline checks; new pages should use these.
-// Tables: jmis_userauth (admin), jmis_teacherauth (teacher), devauth (developer),
-// jmis_secretaryauth (secretary — read-only dashboard access).
+// Tables: bluebell_userauth (admin), bluebell_teacherauth (teacher), devauth (developer),
+// bluebell_secretaryauth (secretary — read-only dashboard access).
 
 // Built-in developer accounts — always treated as developer even if the
 // devauth table is missing or does not contain them yet.
@@ -14,12 +14,12 @@ const norm = (e) => (e || '').toLowerCase();
 
 export async function fetchAuthRoles(supabase) {
   const [adminRes, teacherRes, devRes, secretaryRes] = await Promise.allSettled([
-    supabase.from('jmis_userauth').select('email'),
-    supabase.from('jmis_teacherauth').select('email'),
+    supabase.from('bluebell_userauth').select('email'),
+    supabase.from('bluebell_teacherauth').select('email'),
     supabase.from('devauth').select('email'),
     // table may not exist until platform_staff_management_setup.sql runs —
     // allSettled keeps a failure here harmless (resolves to [])
-    supabase.from('jmis_secretaryauth').select('email'),
+    supabase.from('bluebell_secretaryauth').select('email'),
   ]);
 
   const unwrap = (res) =>

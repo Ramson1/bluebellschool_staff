@@ -87,13 +87,13 @@ export default function StaffHome() {
 
     Promise.all([
       supabase
-        .from("jmis_staff_attendance")
+        .from("bluebell_staff_attendance")
         .select("date, check_in_time, check_out_time, method")
         .eq("staff_id", staff.id)
         .eq("date", d)
         .maybeSingle(),
       supabase
-        .from("jmis_announcements")
+        .from("bluebell_announcements")
         .select("title, body, created_at, audience, pinned")
         .or(
           `audience.eq.all_staff${allClasses.length ? "," + allClasses.map((c) => `audience.eq.class:${c}`).join(",") : ""}`
@@ -105,20 +105,20 @@ export default function StaffHome() {
       // stored class labels vary in case/spacing, and an exact .in() would
       // quietly under-count the roster card.
       allClasses.length
-        ? whereClassIn(supabase.from("jmis_student").select("id, name, class"), "class", allClasses).limit(500)
+        ? whereClassIn(supabase.from("bluebell_student").select("id, name, class"), "class", allClasses).limit(500)
         : Promise.resolve({ data: [] }),
       // today's classroom register summary (class teachers only)
       classTeacherClasses.length
-        ? whereClassIn(supabase.from("jmis_attendance").select("student_name, status"), "class", classTeacherClasses).eq("date", d)
+        ? whereClassIn(supabase.from("bluebell_attendance").select("student_name, status"), "class", classTeacherClasses).eq("date", d)
         : Promise.resolve({ data: [] }),
-      recent("jmis_assignments"),
-      recent("jmis_notes"),
-      recent("jmis_lesson_plans"),
-      recent("jmis_cbtQuestions"),
+      recent("bluebell_assignments"),
+      recent("bluebell_notes"),
+      recent("bluebell_lesson_plans"),
+      recent("bluebell_cbtQuestions"),
       // recent results (scoped by studentClass ∈ my classes)
       allClasses.length
         ? supabase
-            .from("jmis_result")
+            .from("bluebell_result")
             .select("*")
             .order("id", { ascending: false })
             .limit(200)

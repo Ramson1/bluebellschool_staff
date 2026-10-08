@@ -4,7 +4,7 @@
 // const getAdminEmail = async (supabase) => {
 //   try {
 //     const { data: settings, error } = await supabase
-//       .from('jmis_settings')
+//       .from('bluebell_settings')
 //       .select('adminEmail')
 //       .limit(1);
 
@@ -24,7 +24,7 @@
 const getEmailRecipients = async (supabase) => {
   try {
     const { data: settings, error } = await supabase
-      .from('jmis_settings')
+      .from('bluebell_settings')
       .select('adminEmail, additionalemails')
       .limit(1);
 
@@ -78,7 +78,7 @@ const sendEmailNotification = async (supabase, subject, message, recipients = nu
       emailRecipients = await getEmailRecipients(supabase);
       
       if (!emailRecipients || emailRecipients.length === 0) {
-        console.warn('⚠️ No email recipients configured in jmis_settings');
+        console.warn('⚠️ No email recipients configured in bluebell_settings');
         return { success: false, error: 'No email recipients configured' };
       }
     }

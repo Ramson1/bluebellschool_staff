@@ -20,7 +20,7 @@ export function installWriteGuard() {
   if (installed) return;
   installed = true;
 
-  const proto = Object.getPrototypeOf(supabase.from("jmis_settings"));
+  const proto = Object.getPrototypeOf(supabase.from("bluebell_settings"));
   if (!proto) return;
 
   for (const method of ["insert", "update", "upsert"]) {

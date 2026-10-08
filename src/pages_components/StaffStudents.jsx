@@ -8,7 +8,7 @@ import { RiGroupLine, RiSearchLine, RiRefreshLine } from "react-icons/ri";
 import { toast } from "react-toastify";
 import "../styles/AdminPages.css";
 
-// Student passport images are stored in jmis_student.passport as a BARE
+// Student passport images are stored in bluebell_student.passport as a BARE
 // FILENAME inside the public 'passport' storage bucket (same contract the
 // admin FullStudent page uses), so render them via the bucket's public URL.
 // Legacy rows that already hold a full URL are used as-is; empty falls back
@@ -58,7 +58,7 @@ export default function StaffStudents() {
     // client-side normCls filter below stays the authoritative gate.
     whereClassIn(
       supabase
-        .from("jmis_student")
+        .from("bluebell_student")
         .select("id, name, class, sex, parentcontact, passport, token"),
       "class",
       [cls]

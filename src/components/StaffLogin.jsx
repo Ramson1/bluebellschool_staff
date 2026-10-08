@@ -11,7 +11,7 @@ import "../styles/StaffShell.css";
 
 // Staff portal sign-in — email OR full name + password (accounts are provisioned
 // by the admin on the Staff Accounts page; no Google sign-in here). A name login
-// is resolved to the account's email via jmis_staff before signing in, so staff
+// is resolved to the account's email via bluebell_staff before signing in, so staff
 // can later replace their provisional email on the Profile page without losing
 // their familiar name login.
 export default function StaffLogin() {
@@ -32,7 +32,7 @@ export default function StaffLogin() {
     const target = normalizeName(name);
     if (!target) throw new Error("Enter your full name or email");
     const { data, error } = await supabase
-      .from("jmis_staff")
+      .from("bluebell_staff")
       .select("name, email")
       .ilike("name", target);
     if (error) throw new Error("Could not look up your name — use your email instead");

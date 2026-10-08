@@ -6,7 +6,7 @@ import { makeAcademicsPage } from "./AcademicsKit.jsx";
 
 // Homework / assessments / projects per class+subject.
 const AssignmentsPage = makeAcademicsPage({
-  table: "jmis_assignments",
+  table: "bluebell_assignments",
   authorField: "created_by",
   title: "Assignments",
   icon: RiFileTextLine,

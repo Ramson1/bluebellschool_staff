@@ -7,8 +7,8 @@
 //
 // The author column is spelled differently per table, so the mapping lives
 // here and every surface reads it from one place:
-//   jmis_notes.uploaded_by · jmis_assignments.created_by
-//   jmis_lesson_plans.submitted_by · jmis_cbt*/created_by
+//   bluebell_notes.uploaded_by · bluebell_assignments.created_by
+//   bluebell_lesson_plans.submitted_by · bluebell_cbt*/created_by
 //
 // The CBT tables only gained `created_by` through an optional SQL paste, so a
 // row can arrive without the key at all. That case is treated as "not yet
@@ -18,12 +18,12 @@
 import { supabase } from "../supabaseClient.js";
 
 const AUTHOR_FIELDS = {
-  jmis_notes: "uploaded_by",
-  jmis_assignments: "created_by",
-  jmis_lesson_plans: "submitted_by",
-  jmis_cbtquestions: "created_by",
-  jmis_cbt_completion: "created_by",
-  jmis_cbt_essay: "created_by",
+  bluebell_notes: "uploaded_by",
+  bluebell_assignments: "created_by",
+  bluebell_lesson_plans: "submitted_by",
+  bluebell_cbtquestions: "created_by",
+  bluebell_cbt_completion: "created_by",
+  bluebell_cbt_essay: "created_by",
 };
 
 // Column that stores the authoring email for a table (defaults to created_by).

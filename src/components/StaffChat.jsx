@@ -40,7 +40,7 @@ export default function StaffChat() {
     // Narrowed to the classes this teacher is form teacher of, across the
     // known class-label spellings
     const { data: students, error } = await whereClassIn(
-      supabase.from("jmis_student").select("id, name, class"),
+      supabase.from("bluebell_student").select("id, name, class"),
       "class",
       classes
     ).limit(500);

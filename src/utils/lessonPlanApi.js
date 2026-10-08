@@ -1,11 +1,11 @@
 // Shared data layer for the Lesson Plan builder.
 // Used by the staff portal (teachers author) and the admin dashboard (review).
-// It talks to the existing jmis_lesson_plans table, which the migration
-// jmis_lesson_plan_builder_setup.sql widened with the paper-template fields.
+// It talks to the existing bluebell_lesson_plans table, which the migration
+// bluebell_lesson_plan_builder_setup.sql widened with the paper-template fields.
 
 import { supabase } from "../supabaseClient.js";
 
-export const TABLE = "jmis_lesson_plans";
+export const TABLE = "bluebell_lesson_plans";
 export const REVIEW_STATUSES = ["pending", "reviewed", "approved", "revision"];
 
 // A blank plan with the paper template's default Lesson-Structure rows.

@@ -20,7 +20,7 @@ import "../styles/AdminPages.css";
 // Req 10 (staff side): review the work students have submitted against the
 // assignments/assessments/projects this teacher published to their classes.
 // Loads only this teacher's scoped assignments, then the submissions whose
-// assignment_id belongs to that set, grouped per assignment. jmis_assignment_
+// assignment_id belongs to that set, grouped per assignment. bluebell_assignment_
 // submissions is intentionally NOT in guardWrite's ACADEMIC_TABLES, so the
 // status update flows through the write guard unblocked.
 export default function StaffSubmissions() {
@@ -37,7 +37,7 @@ export default function StaffSubmissions() {
     (async () => {
       try {
         const { data: asg, error: e1 } = await supabase
-          .from("jmis_assignments")
+          .from("bluebell_assignments")
           .select("*")
           .order("created_at", { ascending: false })
           .limit(500);
@@ -50,13 +50,13 @@ export default function StaffSubmissions() {
           classes.some((c) => normCls(c) === normCls(r.class)) &&
           (scope?.classTeacherClasses.some((c) => normCls(c) === normCls(r.class)) ||
             scope?.subjectPairs.some((p) => normCls(p.class) === normCls(r.class) && normSub(p.subject) === normSub(r.subject))) &&
-          ownedByMe(scope, "jmis_assignments", r)
+          ownedByMe(scope, "bluebell_assignments", r)
         );
         setAssignments(mine);
         if (!mine.length) { setSubs([]); return; }
         const ids = mine.map((a) => a.id);
         const { data: sub, error: e2 } = await supabase
-          .from("jmis_assignment_submissions")
+          .from("bluebell_assignment_submissions")
           .select("*")
           .in("assignment_id", ids)
           .order("submitted_at", { ascending: false });
@@ -86,13 +86,13 @@ export default function StaffSubmissions() {
 
   const markReviewed = async (s) => {
     const { error } = await supabase
-      .from("jmis_assignment_submissions")
+      .from("bluebell_assignment_submissions")
       .update({ status: "reviewed", updated_at: new Date().toISOString() })
       .eq("id", s.id);
     if (error) { toast.error(error.message); return; }
     logAction(supabase, {
       email: scope?.staff?.email, role: "staff",
-      action: "jmis_assignment_submissions_review", targetTable: "jmis_assignment_submissions",
+      action: "bluebell_assignment_submissions_review", targetTable: "bluebell_assignment_submissions",
       recordId: s.id, details: { student: s.student_name, assignment_id: s.assignment_id },
     });
     setSubs((list) => list.map((x) => (x.id === s.id ? { ...x, status: "reviewed" } : x)));

@@ -1,4 +1,4 @@
-// Audit trail helper — fire-and-forget inserts into jmis_auditlogs.
+// Audit trail helper — fire-and-forget inserts into bluebell_auditlogs.
 // NEVER throws into user flows: audit failures must not break the app.
 // Developer accounts are intentionally NOT tracked.
 
@@ -23,7 +23,7 @@ export function logAction(supabase, { email, role, action, targetTable, recordId
     if (!email || DEV_EMAILS_EXCLUDED.includes(email.toLowerCase()) || email === 'Unknown User') return;
     // Fire-and-forget — do not await in UI paths
     supabase
-      .from('jmis_auditlogs')
+      .from('bluebell_auditlogs')
       .insert([{
         email,
         role: role || '',
