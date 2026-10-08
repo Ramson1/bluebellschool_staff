@@ -1,0 +1,186 @@
+/* ============================================================
+   theme.css — dark/light theming for the staff portal.
+   Ported from bluebellschool/app/globals.css (admin), minus the
+   --snav-* sidebar palette (the staff sidebar in StaffShell.css
+   uses its own fixed green gradient).
+
+   Two jobs:
+   1. Define the palette variables that the ap / fs CSS reads via
+      var(--card-bg,#fff) etc., resolved per theme.
+   2. Redirect Bootstrap 5.3's own colour-system variables
+      (the --bs-body, --bs-border and --bs-table families) to that palette in dark
+      mode, so the raw react-bootstrap .table/.form-control/.modal-
+      content/.dropdown inside the verbatim-copied Result/CBT pages
+      stay legible instead of dark-on-dark. :root is <html data-theme>,
+      and react-bootstrap portals under <html>, so the override cascades.
+      `color-scheme: dark` also themes native widgets (scrollbars,
+      <select> popups, date/number inputs).
+   Printable surfaces (lesson-plan doc .lp-doc, result card
+   .redesigned-table) stay white paper by design — see the .table rule.
+   ============================================================ */
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --container-bg: #f8f9fa;
+  --card-bg: #ffffff;
+  --card-border: #f0f2f5;
+  --text-primary: #222;
+  --text-secondary: #888;
+  --input-bg: #ffffff;
+  --input-border: #42aff8;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --warning-bg: #fff3cd;
+}
+
+/* Automatic mode (no explicit choice yet): follow the OS preference.
+   Guarded with :not() so the manual toggles below always win. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --container-bg: #1a1a1a;
+    --card-bg: #242424;
+    --card-border: #333333;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --input-bg: #2a2a2a;
+    --input-border: #555555;
+    --shadow-color: rgba(0, 0, 0, 0.3);
+    --warning-bg: #3d3520;
+  }
+}
+
+/* Explicit choices — set by the theme toggle (src/utils/theme.js) */
+:root[data-theme="dark"] {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --container-bg: #1a1a1a;
+  --card-bg: #242424;
+  --card-border: #333333;
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a0a0;
+  --input-bg: #2a2a2a;
+  --input-border: #555555;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --warning-bg: #3d3520;
+}
+
+:root[data-theme="light"] {
+  --background: #ffffff;
+  --foreground: #171717;
+  --container-bg: #f8f9fa;
+  --card-bg: #ffffff;
+  --card-border: #f0f2f5;
+  --text-primary: #222;
+  --text-secondary: #888;
+  --input-bg: #ffffff;
+  --input-border: #42aff8;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --warning-bg: #fff3cd;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Bootstrap's .text-muted uses a fixed grey that is unreadable on dark
+   backgrounds — theme it with the palette above. */
+html[data-theme="dark"] .text-muted {
+  color: var(--text-secondary, #a0a0a0) !important;
+}
+
+/* =====================================================================
+   DARK MODE — native Bootstrap control layer (app-wide).
+   ===================================================================== */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bs-body-bg: var(--background);
+  --bs-body-color: var(--foreground);
+  --bs-emphasis-color: #ffffff;
+  --bs-border-color: var(--card-border);
+  --bs-secondary-bg: var(--input-bg);
+  --bs-tertiary-bg: var(--card-bg);
+  --bs-secondary-color: var(--text-secondary);
+  --bs-tertiary-color: var(--text-secondary);
+  --bs-link-color: #42aff8;
+  --bs-link-hover-color: #78c6ff;
+  --bs-code-color: #f7b6d2;
+  --bs-highlight-bg: #3d3520;
+}
+
+/* Explicit fallbacks for controls whose surfaces come from fixed values, and
+   for native dropdown option lists (which ignore variable inheritance on some
+   engines). Kept low-specificity so the ap / cbtq / chat dark rules, which use
+   !important or more specific selectors, still win on their own pages. */
+:root[data-theme="dark"] .form-control,
+:root[data-theme="dark"] .form-select,
+:root[data-theme="dark"] .input-group-text,
+:root[data-theme="dark"] textarea {
+  background-color: var(--input-bg);
+  color: var(--foreground);
+  border-color: var(--card-border);
+}
+
+:root[data-theme="dark"] .form-control::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+:root[data-theme="dark"] select option,
+:root[data-theme="dark"] select optgroup {
+  background-color: var(--input-bg);
+  color: var(--foreground);
+}
+
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .modal-content,
+:root[data-theme="dark"] .offcanvas,
+:root[data-theme="dark"] .dropdown-menu,
+:root[data-theme="dark"] .list-group-item {
+  background-color: var(--card-bg);
+  color: var(--foreground);
+  border-color: var(--card-border);
+}
+
+:root[data-theme="dark"] .dropdown-item {
+  color: var(--foreground);
+}
+
+:root[data-theme="dark"] .dropdown-item:hover,
+:root[data-theme="dark"] .dropdown-item:focus {
+  background-color: var(--container-bg);
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .table:not(.redesigned-table) {
+  --bs-table-color: var(--foreground);
+  --bs-table-bg: transparent;
+  --bs-table-border-color: var(--card-border);
+  --bs-table-striped-bg: #232323;
+  --bs-table-striped-color: var(--foreground);
+  --bs-table-hover-bg: #2b2b2b;
+  --bs-table-hover-color: #ffffff;
+  color: var(--foreground);
+  border-color: var(--card-border);
+}
+
+/* Common container helpers (mirrors the admin utility classes; the staff
+   pages mostly use ap-*, but these are cheap to keep for parity). */
+.admin-container {
+  background-color: var(--container-bg);
+  color: var(--foreground);
+}
+
+.admin-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--foreground);
+}
+
+.admin-input {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--foreground);
+}

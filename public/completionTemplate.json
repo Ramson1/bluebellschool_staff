@@ -1,0 +1,23 @@
+[
+  {
+    "questionText": "The capital of France is ______.",
+    "expectedAnswers": ["Paris"],
+    "acceptableSynonyms": ["paris", "city of light", "city of paris"],
+    "requiredKeywords": ["paris"],
+    "points": 1
+  },
+  {
+    "questionText": "Water boils at ______ degrees Celsius.",
+    "expectedAnswers": ["100"],
+    "acceptableSynonyms": ["one hundred", "100°", "100 degrees"],
+    "requiredKeywords": ["100"],
+    "points": 1
+  },
+  {
+    "questionText": "The largest planet in our solar system is ______.",
+    "expectedAnswers": ["Jupiter"],
+    "acceptableSynonyms": ["jupiter"],
+    "requiredKeywords": ["jupiter"],
+    "points": 1
+  }
+]

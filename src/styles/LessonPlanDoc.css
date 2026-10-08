@@ -1,0 +1,212 @@
+/* ===========================================================================
+   Lesson Plan document — professional A4 print template
+   On screen it renders as a white sheet (used inside the preview overlay);
+   when printing, only #lp-print is shown (see @media print at the bottom).
+   =========================================================================== */
+
+.lp-doc {
+  --lp-ink: #14213d;
+  --lp-line: #1f2a44;
+  --lp-muted: #6b7280;
+  --lp-accent: #1f4fd8;
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 14mm 12mm;
+  background: #fff;
+  color: #000;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* ---------- Header ---------- */
+.lp-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border-bottom: 2px solid var(--lp-line);
+  padding-bottom: 6px;
+}
+.lp-logo {
+  height: 18mm;
+  width: 18mm;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #fff;
+}
+.lp-head-text { text-align: center; flex: 1; }
+.lp-school {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--lp-ink);
+}
+.lp-location {
+  font-size: 11px;
+  color: var(--lp-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.lp-title {
+  text-align: center;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 3px;
+  margin: 8px 0 10px;
+  text-decoration: underline;
+  color: var(--lp-ink);
+}
+
+/* ---------- Info grid ---------- */
+.lp-grid,
+.lp-steps,
+.lp-sign {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.lp-grid td,
+.lp-steps th,
+.lp-steps td,
+.lp-sign td {
+  border: 1px solid var(--lp-line);
+  padding: 5px 7px;
+  vertical-align: top;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+.lp-k {
+  width: 24%;
+  font-weight: 700;
+  background: #f3f6f4;
+  color: var(--lp-ink);
+}
+.lp-v { width: 26%; min-height: 18px; }
+.lp-grid-bottom { margin-top: 10px; }
+.lp-grid-bottom .lp-k { width: 26%; }
+
+/* ---------- Section title ---------- */
+.lp-section-title {
+  margin: 12px 0 4px;
+  font-weight: 800;
+  font-size: 12.5px;
+  color: var(--lp-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ---------- Lesson structure table ---------- */
+.lp-steps thead th {
+  background: var(--lp-ink);
+  color: #fff;
+  font-weight: 700;
+  text-align: left;
+  font-size: 11.5px;
+}
+.lp-step-name { font-weight: 700; }
+.lp-step-time { text-align: center; white-space: normal; }
+.lp-empty { text-align: center; color: var(--lp-muted); }
+
+/* ---------- Sign-off ---------- */
+.lp-sign { margin-top: 22px; }
+.lp-sign td { width: 33.33%; border: none; text-align: center; padding-top: 26px; }
+.lp-sign-label { font-size: 11px; color: var(--lp-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.lp-sign-line {
+  border-top: 1px solid var(--lp-line);
+  margin-top: 2px;
+  padding-top: 3px;
+  font-weight: 700;
+  min-height: 16px;
+}
+
+/* ---------- Dark-theme safety: the sheet is always print-white ---------- */
+html[data-theme="dark"] .lp-doc { background: #fff; color: #000; }
+
+/* ===========================================================================
+   Editor helpers (used by the staff/admin Lesson Plan builder)
+   =========================================================================== */
+.lp-steps-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 6px 0 8px;
+}
+.lp-steps-editor { display: flex; flex-direction: column; gap: 8px; }
+.lp-step-row {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr 2fr 2fr auto;
+  gap: 8px;
+  align-items: start;
+}
+.lp-step-row--head {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--lp-muted, #6b7280);
+  padding: 0 2px;
+}
+.lp-step-row--head span { padding-top: 2px; }
+.lp-steps-editor .ap-input { width: 100%; }
+
+/* ---------- Full-screen preview / print overlay ---------- */
+.lp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  flex-direction: column;
+}
+.lp-overlay-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #0f172a;
+  color: #fff;
+}
+.lp-overlay-bar > div { display: flex; gap: 8px; }
+.lp-overlay-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+}
+.lp-overlay-scroll .lp-doc { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); }
+
+/* ===========================================================================
+   Print: show ONLY the A4 sheet
+   =========================================================================== */
+@media print {
+  @page { size: A4 portrait; margin: 0; }
+  html, body { background: #fff !important; }
+  body * { visibility: hidden !important; }
+  #lp-print, #lp-print * { visibility: visible !important; }
+  /* Neutralise the overlay so the sheet isn't clipped or offset by it. */
+  .lp-overlay, .lp-overlay-scroll {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+  #lp-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 210mm;
+    margin: 0;
+    padding: 12mm;
+    box-shadow: none !important;
+  }
+  .lp-doc { box-shadow: none !important; }
+  .lp-steps thead { display: table-header-group; } /* repeat header across pages */
+  .lp-tr, .lp-steps tr { break-inside: avoid; }
+  .no-print { display: none !important; }
+}

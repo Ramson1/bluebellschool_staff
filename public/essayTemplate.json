@@ -1,0 +1,27 @@
+[
+  {
+    "questionText": "Describe the water cycle in your own words.",
+    "expectedAnswer": "The water cycle involves evaporation, condensation, precipitation, and collection.",
+    "requiredKeywords": ["evaporation", "condensation", "precipitation"],
+    "acceptableSynonyms": {
+      "evaporation": ["evaporating", "vaporization", "boiling"],
+      "condensation": ["condensing", "cooling", "forming clouds"],
+      "precipitation": ["rain", "snow", "falling water"]
+    },
+    "minWords": 50,
+    "points": 10
+  },
+  {
+    "questionText": "Explain why photosynthesis is important for life on Earth.",
+    "expectedAnswer": "Photosynthesis produces oxygen and glucose, which are essential for plant growth and animal survival.",
+    "requiredKeywords": ["oxygen", "glucose", "plants", "sunlight"],
+    "acceptableSynonyms": {
+      "oxygen": ["o2", "air"],
+      "glucose": ["sugar", "food", "energy"],
+      "plants": ["plant life", "vegetation"],
+      "sunlight": ["sun", "light", "solar energy"]
+    },
+    "minWords": 60,
+    "points": 10
+  }
+]
