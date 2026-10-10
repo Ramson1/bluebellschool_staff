@@ -7,7 +7,7 @@ import "../src/styles/StaffShell.css";
 export const metadata = {
   title: "Bluebell Staff Portal",
   description: "Staff portal for Bluebell International School",
-  icons: { icon: "/favicon.ico?v=3" },
+  icons: { icon: "/favicon.ico?v=4", apple: "/apple-touch-icon.png" },
 };
 
 // Proper mobile scaling: width follows the device, allow pinch-zoom, and let
