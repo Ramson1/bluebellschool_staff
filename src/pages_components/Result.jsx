@@ -1845,21 +1845,23 @@ Number of Subjects: ${termSubjects.length}`;
             <label htmlFor="studentsAutocomplete" className="res-label">
               <RiUserLine /> Student Name
             </label>
-            <input
+            <select
               id="studentsAutocomplete"
               className="res-input"
               value={selectedStudent}
               onChange={(e) => setSelectedStudent(e.target.value)}
-              list="studentsOptionsList"
-              placeholder={studentClassFilter ? "Search student name..." : "Select a class first"}
-            />
-            <datalist id="studentsOptionsList">
+              disabled={!studentClassFilter}
+            >
+              <option value="">{studentClassFilter ? "Select student name" : "Select a class first"}</option>
               {pickerStudents.map((studentName, index) => (
                 <option key={index} value={studentName}>
                   {studentName}
                 </option>
               ))}
-            </datalist>
+              {selectedStudent && !pickerStudents.includes(selectedStudent) && (
+                <option value={selectedStudent}>{selectedStudent}</option>
+              )}
+            </select>
           </div>
 
           <div className="res-field">
@@ -2093,18 +2095,19 @@ Number of Subjects: ${termSubjects.length}`;
                   </Form.Group>
                   <Form.Group className="mb-3">
                     <Form.Label>Student Name</Form.Label>
-                    <Form.Control
-                      type="text"
-                      list="export-students-list"
-                      placeholder={exportClass ? "Enter or Select Student Name" : "Select a class first"}
+                    <Form.Select
                       value={exportStudentName}
                       onChange={(e) => setExportStudentName(e.target.value)}
-                    />
-                    <datalist id="export-students-list">
+                      disabled={!exportClass}
+                    >
+                      <option value="">{exportClass ? "Select student name" : "Select a class first"}</option>
                       {exportClassStudents.map((studentName, index) => (
-                        <option key={index} value={studentName} />
+                        <option key={index} value={studentName}>{studentName}</option>
                       ))}
-                    </datalist>
+                      {exportStudentName && !exportClassStudents.includes(exportStudentName) && (
+                        <option value={exportStudentName}>{exportStudentName}</option>
+                      )}
+                    </Form.Select>
                   </Form.Group>
                   </>
                 )}

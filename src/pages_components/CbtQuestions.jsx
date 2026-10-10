@@ -1069,12 +1069,24 @@ ${questionsList}`;
   const visibleQuestions = (cbtQuestions || []).filter((q) => {
     if (purposeFilter && q.purpose !== purposeFilter) return false;
     if (classFilter && normCls(q.class) !== normCls(classFilter)) return false;
-    if (subjectFilter && !q.subject?.toLowerCase().includes(subjectFilter.toLowerCase())) return false;
+    if (subjectFilter && normSub(q.subject) !== normSub(subjectFilter)) return false;
     if (termFilter && q.term !== termFilter) return false;
     if (sessionTypeFilter && q.sessionType !== sessionTypeFilter) return false;
     return showArchived ? isArchivedSet(q) : !isArchivedSet(q);
   });
   const archivedCount = (cbtQuestions || []).filter(isArchivedSet).length;
+
+  // Subjects the teacher can filter by: the distinct set present in their own
+  // (already scope-filtered) question list, narrowed to the chosen class. This
+  // is always a subset of their assignments — never the whole school — and it
+  // keeps the picker free of subjects they cannot see. Replaces the old
+  // free-text subject search box so nothing can be typed.
+  const filterSubjectOptions = Array.from(new Set(
+    (cbtQuestions || [])
+      .filter((q) => !classFilter || normCls(q.class) === normCls(classFilter))
+      .map((q) => q.subject)
+      .filter(Boolean)
+  )).sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" }));
 
 
 
@@ -1185,12 +1197,16 @@ ${questionsList}`;
             </Form.Select>
             <div className="cbtq-search">
               <RiSearchLine />
-              <Form.Control
-                type="text"
-                placeholder="Filter by subject"
+              <Form.Select
+                aria-label="Subject filter"
                 value={subjectFilter}
                 onChange={(e) => setSubjectFilter(e.target.value)}
-              />
+              >
+                <option value="">All my subjects</option>
+                {filterSubjectOptions.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </Form.Select>
             </div>
             <button
               type="button"
