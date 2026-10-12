@@ -1,6 +1,6 @@
 // Scope helpers for the staff portal. Every staff page derives its
-// permissions from the staff member's bluebell_staff row + their
-// bluebell_staff_assignments for the CURRENT academic session:
+// permissions from the staff member's jmis_staff row + their
+// jmis_staff_assignments for the CURRENT academic session:
 //   class_teacher of X  → full access to class X (all subjects, students, results)
 //   subject_teacher X/S → access to subject S in class X only
 //   no assignments      → "general staff" mode: profile/announcements only
@@ -8,8 +8,24 @@
 import { supabase } from "../supabaseClient.js";
 import { authorField } from "./ownership.js";
 
+// Designations that unlock the school-wide read-only Records view (Staff /
+// Students / Payments / Attendance / Results + CSV download). Kept in one
+// place and mirrored byte-for-byte into Spring/Bluebell. Matching is
+// lower-cased + trimmed, so edit the spellings here in lowercase.
+// NOTE: this is purely a READ capability — it never touches the assignment
+// scope (allClasses/classTeacherClasses/rosterClasses), so guardWrite keeps
+// rejecting every write for these staff (they stay isGeneral). Add here to
+// grant the view to another designation.
+export const RECORDS_VIEWER_DESIGNATIONS = [
+  "secretary",
+  "registrar",
+  "administrative officer",
+  "bursar",
+  "accountant",
+];
+
 // date_of_appointment lives in a column added by
-// bluebellschool/src/api/bluebell_staff_date_of_appointment.sql. Older databases that
+// jmischool/src/api/jmis_staff_date_of_appointment.sql. Older databases that
 // predate it must not fail the whole staff-scope lookup (every portal page
 // resolves through here), so a select that is rejected for an unknown column
 // is retried with the appointment date dropped.
@@ -28,7 +44,7 @@ export async function fetchStaffScope(email, userId) {
   let cols = STAFF_COLS;
   if (userId) {
     ({ data: staff, error } = await supabase
-      .from("bluebell_staff")
+      .from("jmis_staff")
       .select(cols)
       .eq("auth_user_id", userId)
       .limit(1)
@@ -36,7 +52,7 @@ export async function fetchStaffScope(email, userId) {
     if (error && isMissingColumn(error)) {
       cols = STAFF_COLS_BASE;
       ({ data: staff, error } = await supabase
-        .from("bluebell_staff")
+        .from("jmis_staff")
         .select(cols)
         .eq("auth_user_id", userId)
         .limit(1)
@@ -46,7 +62,7 @@ export async function fetchStaffScope(email, userId) {
   }
   if (!staff && email) {
     ({ data: staff, error } = await supabase
-      .from("bluebell_staff")
+      .from("jmis_staff")
       .select(cols)
       .ilike("email", email)
       .limit(1)
@@ -54,7 +70,7 @@ export async function fetchStaffScope(email, userId) {
     if (error && isMissingColumn(error)) {
       cols = STAFF_COLS_BASE;
       ({ data: staff, error } = await supabase
-        .from("bluebell_staff")
+        .from("jmis_staff")
         .select(cols)
         .ilike("email", email)
         .limit(1)
@@ -68,7 +84,7 @@ export async function fetchStaffScope(email, userId) {
   let session = "";
   let term = "";
   try {
-    const { data: settings } = await supabase.from("bluebell_settings").select("session, term").limit(1);
+    const { data: settings } = await supabase.from("jmis_settings").select("session, term").limit(1);
     session = settings?.[0]?.session || "";
     term = settings?.[0]?.term || "";
   } catch (_) {/* optional */}
@@ -76,7 +92,7 @@ export async function fetchStaffScope(email, userId) {
   let assignments = [];
   try {
     const { data } = await supabase
-      .from("bluebell_staff_assignments")
+      .from("jmis_staff_assignments")
       .select("id, class, subject, assignment_type, academic_session")
       .eq("staff_id", staff.id);
     // keep rows without a session set (legacy) or matching the current session
@@ -84,8 +100,8 @@ export async function fetchStaffScope(email, userId) {
   } catch (_) {/* table may be empty/missing — general mode */}
 
   // Legacy fallback: an admin may have assigned a class/subjects directly on the
-  // staff form (bluebell_staff.class_assigned / .subjects) without creating
-  // bluebell_staff_assignments rows. Surface that so the portal still reflects it.
+  // staff form (jmis_staff.class_assigned / .subjects) without creating
+  // jmis_staff_assignments rows. Surface that so the portal still reflects it.
   if (assignments.length === 0) {
     const legacyClass = String(staff.class_assigned || "").trim();
     const legacySubjects = (
@@ -98,7 +114,7 @@ export async function fetchStaffScope(email, userId) {
       // (form teacher → every subject, roster, attendance). Once subjects are
       // listed the record is describing SUBJECT teaching: they may only score
       // their own rows in Results, and the roster/attendance stay with the
-      // class's form teacher — the same split bluebell_staff_assignments encodes.
+      // class's form teacher — the same split jmis_staff_assignments encodes.
       assignments = legacySubjects.length
         ? legacySubjects.map((sub, i) => ({
             id: `legacy-sub-${i}`, class: legacyClass, subject: sub,
@@ -118,6 +134,13 @@ export async function fetchStaffScope(email, userId) {
     .map((a) => ({ class: a.class, subject: a.subject }));
   const allClasses = [...new Set(assignments.map((a) => a.class))];
 
+  // School-wide read-only Records access, driven purely by designation. This is
+  // additive and independent of the assignment scope above, so a Secretary with
+  // no assignments stays isGeneral (all writes blocked) yet can still open the
+  // read-only Records page.
+  const designationNorm = String(staff.designation || "").toLowerCase().trim();
+  const recordsAccess = RECORDS_VIEWER_DESIGNATIONS.includes(designationNorm);
+
   return {
     staff,
     session,
@@ -132,6 +155,8 @@ export async function fetchStaffScope(email, userId) {
     subjectPairs,
     allClasses,
     isGeneral: assignments.length === 0,
+    // Read-only, school-wide Records view is unlocked by designation alone.
+    recordsAccess,
     // Non-Academic staff (minders, assistants, security, cleaners…) may not
     // touch anything academic-related, even if a class assignment exists.
     isAcademic: String(staff.department || "").toLowerCase() !== "non-academic",
@@ -148,7 +173,7 @@ export async function fetchStaffScope(email, userId) {
 }
 
 // Class names are spelled differently across the schema ("Year 1" in
-// bluebell_staff_assignments vs "Year1" in bluebell_result). Normalize before any
+// jmis_staff_assignments vs "Year1" in jmis_result). Normalize before any
 // scope comparison so the guard matches regardless of source formatting.
 export function normCls(v) {
   return String(v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -157,8 +182,8 @@ export function normSub(v) {
   return String(v || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-// Tables spell class labels differently ("Year 1" in bluebell_staff_assignments vs
-// "Year1" in bluebell_result / legacy pickers). Expand each allowed label into its
+// Tables spell class labels differently ("Year 1" in jmis_staff_assignments vs
+// "Year1" in jmis_result / legacy pickers). Expand each allowed label into its
 // known stored spellings: itself, the space-stripped twin ("Year 1" → "Year1"),
 // the spaced twin ("Year1" → "Year 1") and the hyphenated early-years forms
 // ("PreNursery1" ⇄ "Pre-Nursery 1").
@@ -213,7 +238,7 @@ export function inCurrentSession(row, session) {
 // Subject-level integrity for result writes.
 //
 // guardWrite() is synchronous (writeGuard patches the builder before the
-// request fires) so it cannot diff an incoming bluebell_result row against the
+// request fires) so it cannot diff an incoming jmis_result row against the
 // stored one to see which subjects actually changed. Instead it enforces the
 // CLASS here, and Result.jsx does the merge-preserving save. This helper is
 // the explicit pre-flight the page calls BEFORE saving: given a class and the
@@ -251,8 +276,8 @@ export function guardWrite(scope, table, rows, op) {
   if (!scope || scope.isGeneral) return { ok: false, reason: "No class assignment — portal write access is disabled." };
   const email = String(scope.staff?.email || "").toLowerCase();
   const t = String(table || "").toLowerCase();
-  const ACADEMIC_TABLES = ["bluebell_result", "bluebell_notes", "bluebell_assignments", "bluebell_lesson_plans", "bluebell_attendance"];
-  if (scope.isAcademic === false && (t.startsWith("bluebell_cbt") || ACADEMIC_TABLES.includes(t))) {
+  const ACADEMIC_TABLES = ["jmis_result", "jmis_notes", "jmis_assignments", "jmis_lesson_plans", "jmis_attendance"];
+  if (scope.isAcademic === false && (t.startsWith("jmis_cbt") || ACADEMIC_TABLES.includes(t))) {
     return { ok: false, reason: "Non-academic staff cannot use academic features — ask the administrator if your department is wrong." };
   }
   const list = Array.isArray(rows) ? rows : [rows];
@@ -272,7 +297,7 @@ export function guardWrite(scope, table, rows, op) {
     if (owner && owner !== email) {
       return { ok: false, reason: `Only the teacher who created this entry can change it (${field} must be your own account).` };
     }
-    if (!owner && op === "insert" && ["bluebell_notes", "bluebell_assignments", "bluebell_lesson_plans"].includes(t)) {
+    if (!owner && op === "insert" && ["jmis_notes", "jmis_assignments", "jmis_lesson_plans"].includes(t)) {
       return { ok: false, reason: `New entries must record their author in the ${field} column.` };
     }
     return { ok: true };
@@ -280,8 +305,8 @@ export function guardWrite(scope, table, rows, op) {
 
   for (const raw of list) {
     const row = raw || {};
-    if (t === "bluebell_auditlogs" || t === "bluebell_staff_attendance") continue; // logging + own gate record
-    if (t === "bluebell_result") {
+    if (t === "jmis_auditlogs" || t === "jmis_staff_attendance") continue; // logging + own gate record
+    if (t === "jmis_result") {
       // Class-level only. Subject-level integrity is enforced by
       // resultSubjectGuard() + the merge-preserving save in Result.jsx, because
       // this synchronous guard cannot compare against the stored term array.
@@ -296,13 +321,13 @@ export function guardWrite(scope, table, rows, op) {
           }`,
         };
       }
-    } else if (t.startsWith("bluebell_cbt")) {
+    } else if (t.startsWith("jmis_cbt")) {
       if (!mayPair(row.class, row.subject)) {
         return { ok: false, reason: `You may only create CBT sessions for: ${scope.subjectPairs.map((p) => `${p.subject} (${p.class})`).join(", ") || scope.allClasses.join(", ")}.` };
       }
       const a = authorOk(row);
       if (!a.ok) return a;
-    } else if (t === "bluebell_announcements") {
+    } else if (t === "jmis_announcements") {
       const aud = String(row.audience || "");
       const cls = aud.startsWith("class:") ? aud.slice(6) : null;
       // staff may post to all staff, all students, or one of their assigned classes
@@ -312,7 +337,7 @@ export function guardWrite(scope, table, rows, op) {
       if (row.created_by && String(row.created_by).toLowerCase() !== email) {
         return { ok: false, reason: "Announcements must be created under your own account." };
       }
-    } else if (t === "bluebell_notes" || t === "bluebell_assignments" || t === "bluebell_lesson_plans") {
+    } else if (t === "jmis_notes" || t === "jmis_assignments" || t === "jmis_lesson_plans") {
       const subjectOk =
         scope.classTeacherClasses.some((c) => normCls(c) === normCls(row.class)) ||
         scope.subjectPairs.some((p) => normCls(p.class) === normCls(row.class) && normSub(p.subject) === normSub(row.subject));
@@ -321,7 +346,7 @@ export function guardWrite(scope, table, rows, op) {
       }
       const a = authorOk(row);
       if (!a.ok) return a;
-    } else if (t === "bluebell_attendance") {
+    } else if (t === "jmis_attendance") {
       // class attendance — class teachers only
       if (!scope.classTeacherClasses.some((c) => normCls(c) === normCls(row.class))) {
         return { ok: false, reason: "Only class teachers may take attendance for a class." };

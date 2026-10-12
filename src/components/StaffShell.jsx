@@ -28,6 +28,8 @@ import {
   RiMessage2Line,
   RiSunLine,
   RiMoonLine,
+  RiTeamLine,
+  RiPriceTagLine,
 } from "react-icons/ri";
 import "../styles/AdminPages.css";
 import "../styles/StaffShell.css";
@@ -39,7 +41,7 @@ export const useStaff = () => useContext(StaffContext);
 
 const NAV = [
   { href: "/home", label: "Dashboard", icon: RiDashboardLine },
-  { href: "/classes", label: "My Classes", icon: RiSchoolLine },
+  { href: "/classes", label: "My Classes", icon: RiSchoolLine, hideForRecords: true },
   { href: "/students", label: "Students", icon: RiGroupLine, need: "formTeacher" },
   { href: "/results", label: "Results", icon: RiBarChartBoxLine, need: "teaching" },
   { href: "/cbt_questions", label: "CBT Questions", icon: RiQuestionAnswerLine, need: "teaching" },
@@ -51,6 +53,22 @@ const NAV = [
   { href: "/chat", label: "Messages", icon: RiMessage2Line },
   { href: "/attendance", label: "Class Attendance", icon: RiTimeLine, need: "formTeacher" },
   { href: "/profile", label: "My Profile", icon: RiUserLine },
+];
+
+// School-wide, read-only Records datasets — each its own sidebar button, shown
+// only to admin/secretarial designations (scope.recordsAccess). Kept separate
+// from the teacher NAV above so teachers never see them and secretaries never
+// see the editable teacher surfaces.
+const RECORDS_NAV = [
+  { href: "/records/staff", label: "Staff Records", icon: RiTeamLine },
+  { href: "/records/students", label: "Student Records", icon: RiGroupLine },
+  { href: "/records/payments", label: "Payments", icon: RiPriceTagLine },
+  { href: "/records/attendance", label: "Attendance", icon: RiTimeLine },
+  { href: "/records/results", label: "Results", icon: RiBarChartBoxLine },
+  { href: "/records/lesson_plans", label: "Lesson Plans", icon: RiDraftLine },
+  { href: "/records/cbt", label: "CBT Questions", icon: RiQuestionAnswerLine },
+  { href: "/records/notes", label: "E-Notes", icon: RiBookOpenLine },
+  { href: "/records/assignments", label: "Assignments", icon: RiFileTextLine },
 ];
 
 export default function StaffShell({ children }) {
@@ -220,8 +238,13 @@ export default function StaffShell({ children }) {
     // Student-info surfaces (roster, attendance) are form-teacher only —
     // subject teachers just see student names inside their own Results/CBT.
     if (n.need === "formTeacher" && (!academic || (scope.rosterClasses || []).length === 0)) return false;
+    // My Classes is a teaching surface; hidden for read-only Records designations.
+    if (n.hideForRecords && scope.recordsAccess) return false;
     return true;
   });
+  // Records designations get one read-only button per dataset, appended after
+  // the standard nav. Teachers without the designation never see these.
+  if (scope.recordsAccess) items.push(...RECORDS_NAV);
   const ctxValue = { ...scope, signOut, reload: resolve };
 
   const showLabels = isMobile || !collapsed;
@@ -241,11 +264,11 @@ export default function StaffShell({ children }) {
             </button>
           </div>
           <div className="staff-side-brand">
-            <img src="/logo.jpg" alt="Bluebell" />
+            <img src="/logo.jpg" alt="JMIS" />
             {showLabels && (
               <div>
                 <b>Staff Portal</b>
-                <span>Bluebell School</span>
+                <span>JMIS School</span>
               </div>
             )}
           </div>
