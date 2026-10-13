@@ -320,6 +320,8 @@ export const schoolSubjects = {
     "Handwriting"
   ],
   year7: [
+    "Physics",
+    "Chemistry",
     "Intermediate Science",
     "Physical and Health Education",
     "Business Studies",
@@ -339,6 +341,10 @@ export const schoolSubjects = {
     "Diction",
   ],
   year8: [
+    "Physics",
+    "Chemistry",
+    "Basic Technology",
+    "Basic Science",
     "Intermediate Science",
     "Physical and Health Education",
     "Business Studies",
@@ -360,6 +366,10 @@ export const schoolSubjects = {
     "Home Economics",
   ],
   year9: [
+    "Physics",
+    "Chemistry",
+    "Basic Technology",
+    "Basic Science",
     "Intermediate Science",
     "Physical and Health Education",
     "Business Studies",
