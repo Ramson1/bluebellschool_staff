@@ -69,18 +69,39 @@ const getAdminEmail = async (supabase) => {
 // Function to send email notification
 const sendEmailNotification = async (supabase, subject, message, recipients = null) => {
   try {
-    let emailRecipients = recipients;
-    
-    // If no recipients provided, get all configured recipients from database
-        // An empty array means this school has not configured an address yet —
-    // fall back to the settings lookup instead of POSTing mail to nobody.
-    if (!emailRecipients || !emailRecipients.length) {
-      emailRecipients = await getEmailRecipients(supabase);
-      
-      if (!emailRecipients || emailRecipients.length === 0) {
-        console.warn('⚠️ No email recipients configured in bluebell_settings');
-        return { success: false, error: 'No email recipients configured' };
+    const CORE_NOTIFICATION_EMAILS = ['rhemaexpertsolutions@gmail.com', 'onyevid@gmail.com'];
+    // System change notifications (created/updated/deleted records such as CBT
+    // exams, results and questions) must reach exactly the two maintainers plus
+    // the school's configured admin email — never the wider additionalemails
+    // list. Any explicitly-passed recipient is merged in (de-duped) so a
+    // specifically targeted address is preserved.
+    const notificationRecipients = [...CORE_NOTIFICATION_EMAILS];
+    try {
+      const { data: settings } = await supabase
+        .from('bluebell_settings')
+        .select('adminEmail')
+        .limit(1);
+      if (settings && settings.length > 0 && settings[0].adminEmail) {
+        notificationRecipients.push(settings[0].adminEmail);
       }
+    } catch (settingsError) {
+      console.warn('Could not fetch school admin email for notification:', settingsError && settingsError.message);
+    }
+    const explicitlyPassed = recipients
+      ? (Array.isArray(recipients) ? recipients : [recipients])
+      : [];
+    const seenRecipients = new Set();
+    const emailRecipients = [];
+    for (const address of [...notificationRecipients, ...explicitlyPassed]) {
+      const key = String(address || '').trim().toLowerCase();
+      if (key && !seenRecipients.has(key)) {
+        seenRecipients.add(key);
+        emailRecipients.push(String(address).trim());
+      }
+    }
+    if (emailRecipients.length === 0) {
+      console.warn('⚠️ No email recipients configured for notification');
+      return { success: false, error: 'No email recipients configured' };
     }
 
     // Ensure it's always an array
