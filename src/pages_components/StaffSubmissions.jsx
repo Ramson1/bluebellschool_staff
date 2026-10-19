@@ -152,9 +152,29 @@ export default function StaffSubmissions() {
                           </span>
                         </td>
                         <td>
-                          {s.file_url ? (
-                            <a className="ap-btn sm ghost" href={s.file_url} target="_blank" rel="noopener noreferrer"><RiDownloadLine /> Open</a>
-                          ) : <span className="ap-muted">—</span>}
+                          {(() => {
+                            const list = Array.isArray(s.attachments) && s.attachments.length
+                              ? s.attachments
+                              : s.file_url
+                                ? [{ url: s.file_url, name: "attached file", type: "file" }]
+                                : [];
+                            if (!list.length) return <span className="ap-muted">—</span>;
+                            return (
+                              <div className="d-flex flex-wrap gap-1" style={{ maxWidth: 260 }}>
+                                {list.map((att, i) =>
+                                  att.type === "image" ? (
+                                    <a key={att.url + i} href={att.url} target="_blank" rel="noopener noreferrer" title={att.name || "image"}>
+                                      <img src={att.url} alt={att.name || "image"} style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, border: "1px solid #e5e7eb", display: "block" }} />
+                                    </a>
+                                  ) : (
+                                    <a key={att.url + i} className="ap-btn sm ghost" href={att.url} target="_blank" rel="noopener noreferrer" style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                      <RiDownloadLine /> {att.name || "Open"}
+                                    </a>
+                                  )
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td>{s.submitted_at ? new Date(s.submitted_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "—"}</td>
                         <td><span className={"ap-badge " + (s.status === "reviewed" ? "info" : "neutral")}>{s.status || "submitted"}</span></td>
