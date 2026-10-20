@@ -103,10 +103,14 @@ const CbtQuestions = () => {
   const [showArchived, setShowArchived] = useState(false); // Toggle archived items
   // const [adminEmail, setAdminEmail] = useState(''); // State for admin email - Unused
 
-  // Get current user's email for audit trail
-  const getCurrentUserEmail = () => {
-    return user?.user_metadata?.email || 'Unknown User';
-  };
+  // Resolve the acting staff member for the audit trail / notification. Staff
+  // accounts carry no email in user_metadata, so reading it alone resolved to
+  // 'Unknown User' and dropped the audit row — use the staff scope (name +
+  // email) as the authoritative source, with the auth session as fallback.
+  const getCurrentUserEmail = () =>
+    String(scope?.staff?.email || user?.email || user?.user_metadata?.email || '').trim();
+  const getCurrentUserName = () =>
+    String(scope?.staff?.name || user?.user_metadata?.full_name || '').trim();
 
   // Email used to sign records: the staff row is authoritative, the auth
   // session is the fallback.
@@ -644,7 +648,8 @@ const CbtQuestions = () => {
     // Audit: question deleted
     logAction(supabase, {
       email: getCurrentUserEmail(),
-      role: getAuditRole(),
+      name: getCurrentUserName(),
+      role: "staff",
       action: "cbt_question_delete",
       targetTable: targetTable,
       recordId: questionId,
@@ -654,7 +659,7 @@ const CbtQuestions = () => {
     try {
       const emailSubject = 'CBT Question Deleted';
       const currentUserEmail = getCurrentUserEmail();
-      const emailMessage = `A CBT question has been deleted by ${currentUserEmail}:
+      const emailMessage = `A CBT question has been deleted by ${getCurrentUserName() || currentUserEmail || 'a staff member'}:
 
 Subject: ${questionData.subject}
 Class: ${questionData.class}`;
@@ -738,7 +743,8 @@ Class: ${questionData.class}`;
       // Audit: question updated
       logAction(supabase, {
         email: getCurrentUserEmail(),
-        role: getAuditRole(),
+        name: getCurrentUserName(),
+        role: "staff",
         action: "cbt_question_update",
         targetTable: 'bluebell_cbtQuestions',
         recordId: currentQuestionId,
@@ -779,7 +785,7 @@ Class: ${questionData.class}`;
           return questionDetail;
         }).join('\n');
         
-        const emailMessage = `A CBT question has been updated by ${currentUserEmail}:
+        const emailMessage = `A CBT question has been updated by ${getCurrentUserName() || currentUserEmail || 'a staff member'}:
 
 Subject: ${newSubject}
 Class: ${newClass}
@@ -864,7 +870,8 @@ ${questionsList}`;
       // Audit: question added
       logAction(supabase, {
         email: getCurrentUserEmail(),
-        role: getAuditRole(),
+        name: getCurrentUserName(),
+        role: "staff",
         action: "cbt_question_add",
         targetTable: targetTable,
         details: { questionText: newQuestionData?.questionText, sessionType },
@@ -916,7 +923,7 @@ ${questionsList}`;
           }).join('\n');
         }
         
-        const emailMessage = `A new CBT ${sessionType} question has been added by ${currentUserEmail}:
+        const emailMessage = `A new CBT ${sessionType} question has been added by ${getCurrentUserName() || currentUserEmail || 'a staff member'}:
 
 Session Type: ${sessionType.charAt(0).toUpperCase() + sessionType.slice(1)}
 Subject: ${newSubject}
@@ -1266,14 +1273,15 @@ ${questionsList}`;
                     setCbtQuestions([]);
                     const emailSubject = 'All CBT Questions Deleted';
                     const currentUserEmail = getCurrentUserEmail();
-                    const emailMessage = `All CBT questions have been deleted by ${currentUserEmail}.`;
+                    const emailMessage = `All CBT questions have been deleted by ${getCurrentUserName() || currentUserEmail || 'a staff member'}.`;
                     await sendEmailNotification(supabase, emailSubject, emailMessage);
                     toast.success('All CBT questions deleted successfully');
 
                     // Audit: all questions deleted
                     logAction(supabase, {
                       email: currentUserEmail,
-                      role: getAuditRole(),
+                      name: getCurrentUserName(),
+                      role: "staff",
                       action: "cbt_questions_delete_all",
                       targetTable: 'bluebell_cbtQuestions',
                     });

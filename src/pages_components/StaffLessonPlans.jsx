@@ -107,7 +107,7 @@ export default function LessonPlansPage() {
     try {
       const saved = await savePlan(form, { editing, authorEmail: scope?.staff?.email });
       logAction(supabase, {
-        email: scope?.staff?.email, role: "staff",
+        email: scope?.staff?.email, name: scope?.staff?.name, role: "staff",
         action: editing ? "bluebell_lesson_plans_update" : "bluebell_lesson_plans_add",
         targetTable: "bluebell_lesson_plans", recordId: saved?.id,
         details: { class: saved?.class, subject: saved?.subject, topic: saved?.topic || "" },
@@ -130,7 +130,7 @@ export default function LessonPlansPage() {
     if (!window.confirm(`Delete this lesson plan for ${r.class} · ${r.subject}?`)) return;
     try {
       await deletePlan(r.id);
-      logAction(supabase, { email: scope?.staff?.email, role: "staff", action: "bluebell_lesson_plans_delete", targetTable: "bluebell_lesson_plans", recordId: r.id, details: { class: r.class, subject: r.subject } });
+      logAction(supabase, { email: scope?.staff?.email, name: scope?.staff?.name, role: "staff", action: "bluebell_lesson_plans_delete", targetTable: "bluebell_lesson_plans", recordId: r.id, details: { class: r.class, subject: r.subject } });
       setRows((rs) => rs.filter((x) => x.id !== r.id));
       toast.success("Deleted.");
     } catch (e) { toast.error(e.message); }

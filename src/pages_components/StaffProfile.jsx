@@ -126,7 +126,7 @@ export default function StaffProfile() {
       setBaseline(saved);
       setPicFile(null);
       logAction(supabase, {
-        email: staff?.email, role: "staff", action: "staff_profile_self_update", targetTable: "bluebell_staff",
+        email: staff?.email, name: staff?.name, role: "staff", action: "staff_profile_self_update", targetTable: "bluebell_staff",
         recordId: staff?.id, details: { changed: EDITABLE.filter((k) => saved[k] !== (prev[k] || "")) },
       });
       toast.success("Your details are updated.");
@@ -156,7 +156,7 @@ export default function StaffProfile() {
         body: JSON.stringify({ action: "clear_password" }),
       }).catch(() => {});
     });
-    logAction(supabase, { email: staff?.email, role: "staff", action: "staff_password_change", targetTable: "auth", details: {} });
+    logAction(supabase, { email: staff?.email, name: staff?.name, role: "staff", action: "staff_password_change", targetTable: "auth", details: {} });
     setPw({ next: "", confirm: "" });
     toast.success("Password updated. Use it the next time you sign in.");
   };
@@ -175,7 +175,7 @@ export default function StaffProfile() {
       });
       const out = await res.json().catch(() => ({}));
       if (!res.ok || out.error) throw new Error(out.error || "Could not update email");
-      logAction(supabase, { email: next, role: "staff", action: "staff_email_change", targetTable: "bluebell_staff", details: { previous: staff.email } });
+      logAction(supabase, { email: next, name: staff?.name, role: "staff", action: "staff_email_change", targetTable: "bluebell_staff", details: { previous: staff.email } });
       setEmailForm({ next: "", confirm: "" });
       toast.success(out.unchanged ? "That is already your email." : `Login email updated to ${next}. You can still sign in with your full name too.`);
       scope.reload?.();

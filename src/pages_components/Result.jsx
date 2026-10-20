@@ -322,10 +322,14 @@ export default function Result() {
     isDev ||
     (userAuth && userAuth.some && userAuth.some((auth) => auth.email === user?.user_metadata?.email));
 
-  // Get current user's email for audit trail
-  const getCurrentUserEmail = () => {
-    return user?.user_metadata?.email || 'Unknown User';
-  };
+  // Resolve the acting staff member for the audit trail / notification. Staff
+  // accounts carry no email in user_metadata, so reading it alone resolved to
+  // 'Unknown User' and dropped the audit row — use the staff scope (name +
+  // email) as the authoritative source, with the auth session as fallback.
+  const getCurrentUserEmail = () =>
+    String(scope?.staff?.email || user?.email || user?.user_metadata?.email || '').trim();
+  const getCurrentUserName = () =>
+    String(scope?.staff?.name || user?.user_metadata?.full_name || '').trim();
 
   // Resolve the acting user's role for audit logging
   const getAuditRole = () => {
@@ -1674,7 +1678,7 @@ export default function Result() {
           }
         }).join('\n');
 
-        const emailMessage = `Student result has been updated by ${currentUserEmail}:
+        const emailMessage = `Student result has been updated by ${getCurrentUserName() || currentUserEmail || 'a staff member'}:
 
 Student Name: ${selectedStudent}
 Class: ${studentClass}
@@ -1693,7 +1697,8 @@ ${detailedScores}`;
         // Audit: result updated
         logAction(supabase, {
           email: getCurrentUserEmail(),
-          role: getAuditRole(),
+          name: getCurrentUserName(),
+          role: "staff",
           action: "result_update",
           targetTable: "bluebell_result",
           recordId: fetchedResultId,
@@ -1721,7 +1726,7 @@ ${detailedScores}`;
           }
         }).join('\n');
 
-        const emailMessage = `New student result has been uploaded by ${currentUserEmail}:
+        const emailMessage = `New student result has been uploaded by ${getCurrentUserName() || currentUserEmail || 'a staff member'}:
 
 Student Name: ${selectedStudent}
 Class: ${studentClass}
@@ -1740,7 +1745,8 @@ ${detailedScores}`;
         // Audit: result uploaded
         logAction(supabase, {
           email: getCurrentUserEmail(),
-          role: getAuditRole(),
+          name: getCurrentUserName(),
+          role: "staff",
           action: "result_upload",
           targetTable: "bluebell_result",
           details: { studentName: selectedStudent, class: studentClass, term: termFilter, editedSubjects: termSubjectsToUpload.length, totalSubjects: termSubjectsWritten.length },
@@ -1797,7 +1803,7 @@ ${detailedScores}`;
       // Send email notification for published results
       const emailSubject = 'Student Result Published';
       const currentUserEmail = getCurrentUserEmail();
-      const emailMessage = `Student result has been published by ${currentUserEmail}:
+      const emailMessage = `Student result has been published by ${getCurrentUserName() || currentUserEmail || 'a staff member'}:
 
 Student Name: ${resultData.studentName}
 Class: ${resultData.studentClass}

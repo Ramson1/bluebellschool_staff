@@ -91,7 +91,7 @@ export default function StaffSubmissions() {
       .eq("id", s.id);
     if (error) { toast.error(error.message); return; }
     logAction(supabase, {
-      email: scope?.staff?.email, role: "staff",
+      email: scope?.staff?.email, name: scope?.staff?.name, role: "staff",
       action: "bluebell_assignment_submissions_review", targetTable: "bluebell_assignment_submissions",
       recordId: s.id, details: { student: s.student_name, assignment_id: s.assignment_id },
     });

@@ -244,7 +244,7 @@ export function makeAcademicsPage(config) {
       setSaving(false);
       if (error) { toast.error(error.message); return; }
       logAction(supabase, {
-        email: scope?.staff?.email, role: "staff",
+        email: scope?.staff?.email, name: scope?.staff?.name, role: "staff",
         action: editing ? `${config.table}_update` : `${config.table}_add`,
         targetTable: config.table, recordId: data?.[0]?.id,
         details: { class: payload.class, subject: payload.subject, title: payload.title || payload.topic || "" },
@@ -261,7 +261,7 @@ export function makeAcademicsPage(config) {
       if (!window.confirm(`Delete this entry for ${r.class}${r.subject ? " · " + r.subject : ""}?`)) return;
       const { error } = await supabase.from(config.table).delete().eq("id", r.id);
       if (error) { toast.error(error.message); return; }
-      logAction(supabase, { email: scope?.staff?.email, role: "staff", action: `${config.table}_delete`, targetTable: config.table, recordId: r.id, details: { class: r.class, subject: r.subject } });
+      logAction(supabase, { email: scope?.staff?.email, name: scope?.staff?.name, role: "staff", action: `${config.table}_delete`, targetTable: config.table, recordId: r.id, details: { class: r.class, subject: r.subject } });
       setRows((rs) => rs.filter((x) => x.id !== r.id));
       toast.success("Deleted.");
     };

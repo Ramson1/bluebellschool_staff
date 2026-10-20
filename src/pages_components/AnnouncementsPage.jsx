@@ -58,7 +58,7 @@ export default function AnnouncementsPage() {
       .select();
     setSaving(false);
     if (error) { toast.error(error.message); return; } // writeGuard may have blocked it
-    logAction(supabase, { email: scope?.staff?.email, role: "staff", action: "announcement_add", targetTable: "bluebell_announcements", recordId: data?.[0]?.id, details: { audience: form.audience, title: form.title } });
+    logAction(supabase, { email: scope?.staff?.email, name: scope?.staff?.name, role: "staff", action: "announcement_add", targetTable: "bluebell_announcements", recordId: data?.[0]?.id, details: { audience: form.audience, title: form.title } });
     setShow(false);
     setRows((rs) => [data[0], ...rs]);
     toast.success("Announcement posted.");
@@ -69,7 +69,7 @@ export default function AnnouncementsPage() {
     if (!window.confirm(`Delete "${r.title}"?`)) return;
     const { error } = await supabase.from("bluebell_announcements").delete().eq("id", r.id);
     if (error) { toast.error(error.message); return; }
-    logAction(supabase, { email: scope?.staff?.email, role: "staff", action: "announcement_delete", targetTable: "bluebell_announcements", recordId: r.id, details: { title: r.title } });
+    logAction(supabase, { email: scope?.staff?.email, name: scope?.staff?.name, role: "staff", action: "announcement_delete", targetTable: "bluebell_announcements", recordId: r.id, details: { title: r.title } });
     setRows((rs) => rs.filter((x) => x.id !== r.id));
   };
 
