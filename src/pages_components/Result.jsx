@@ -923,10 +923,10 @@ export default function Result() {
                 );
                 
                 // Get the predefined remarks for this grade
-                const predefinedRemarks = grade && gradeRemarks[grade] ? gradeRemarks[grade] : [];
+                const autoRemark = grade && gradeRemarks[grade] ? gradeRemarks[grade] : "";
                 
                 // Check if the stored remark matches any of the predefined remarks
-                const isCustomRemark = subject.remark && !predefinedRemarks.includes(subject.remark);
+                const isCustomRemark = subject.remark && subject.remark !== autoRemark;
                 
                 acc[subjectName] = {
                   test: subject.test || "",
@@ -988,7 +988,7 @@ export default function Result() {
                 getClassLevelGroup(studentClassFilter.toLowerCase())
               );
               
-              const predefinedOverallRemark = overallGrade && gradeRemarks[overallGrade] ? gradeRemarks[overallGrade][2] : "";
+              const predefinedOverallRemark = overallGrade && gradeRemarks[overallGrade] ? gradeRemarks[overallGrade] : "";
               
               const isCustomOverallRemark = overallResult.overallRemark && overallResult.overallRemark !== predefinedOverallRemark;
               
@@ -1075,10 +1075,10 @@ export default function Result() {
                 );
                 
                 // Get the predefined remarks for this grade
-                const predefinedRemarks = grade && gradeRemarks[grade] ? gradeRemarks[grade] : [];
+                const autoRemark = grade && gradeRemarks[grade] ? gradeRemarks[grade] : "";
                 
                 // Check if the stored remark matches any of the predefined remarks
-                const isCustomRemark = subject.remark && !predefinedRemarks.includes(subject.remark);
+                const isCustomRemark = subject.remark && subject.remark !== autoRemark;
                 
                 acc[subjectName] = {
                   test: subject.test || "",
@@ -1142,7 +1142,7 @@ export default function Result() {
                 getClassLevelGroup(studentClassFilter.toLowerCase())
               );
               
-              const predefinedOverallRemark = overallGrade && gradeRemarks[overallGrade] ? gradeRemarks[overallGrade][2] : "";
+              const predefinedOverallRemark = overallGrade && gradeRemarks[overallGrade] ? gradeRemarks[overallGrade] : "";
               
               const isCustomOverallRemark = overallResult.overallRemark && overallResult.overallRemark !== predefinedOverallRemark;
               
@@ -1365,7 +1365,7 @@ export default function Result() {
     const grade = calculateOverallGrade(studentClass);
     // Check if grade exists in gradeRemarks before accessing
     if (grade && gradeRemarks[grade]) {
-      return gradeRemarks[grade][2];
+      return gradeRemarks[grade];
     }
     return "";
   }
@@ -1374,20 +1374,20 @@ export default function Result() {
     const grade = calculateOverallGrade(studentClass);
     // Check if grade exists in gradeRemarks before accessing
     if (grade && gradeRemarks[grade]) {
-      return gradeRemarks[grade][1];
+      return gradeRemarks[grade];
     }
     return "";
   }
 
   const gradeRemarks = {
-    "A+": ["Excellent", "Outstanding", "Keep it up"],
-    "A": ["Very good", "Outstanding", "Great effort"],
-    "B+": ["Good", "Satisfactory", "More effort"],
-    "B": ["Good", "Satisfactory", "Work harder"],
-    "C+": ["Fair", "Below average", "More effort"],
-    "C": ["Fair", "Needs attention", "Focus more"],
-    "D": ["Poor", "Unacceptable", "Serious help needed"],
-    "E": ["Poor", "Failing", "Immediate help"]
+    "A+": "Excellent",
+    "A": "Very Good",
+    "B+": "Good",
+    "B": "Satisfactory",
+    "C+": "Fair",
+    "C": "Average",
+    "D": "Below Average",
+    "E": "Poor"
   }
 
   const fetchStudentToken = async (studentName, studentClass) => {
@@ -1512,7 +1512,10 @@ export default function Result() {
       if (subjectScores.useCustomRemark) {
         remarkToSave = subjectScores.customRemark ?? "";
       } else {
-        remarkToSave = subjectScores.remark ?? "";
+        const autoGrade = purpose === "midterm"
+          ? calculateMidtermGrade(subjectScores.midtermScore)
+          : determineGrade(calculateTotal(subjectScores, classLevelGroup), classLevelGroup);
+        remarkToSave = gradeRemarks[autoGrade] ?? "";
       }
 
       if (purpose === "midterm") {
@@ -2210,22 +2213,9 @@ Number of Subjects: ${termSubjects.length}`;
                         </div>
                         
                         {!scores[subject]?.useCustomRemark && (
-                          <select
-                            className="form-control"
-                            value={scores[subject]?.remark || ""}
-                            onChange={(e) =>
-                              handleInputChange(subject, "remark", e.target.value)
-                            }
-                          >
-                            <option value="">Select Auto Remark</option>
-                            {gradeRemarks[
-                              calculateMidtermGrade(scores[subject]?.midtermScore)
-                            ]?.map((remark, index) => (
-                              <option key={index} value={remark}>
-                                {remark}
-                              </option>
-                            ))}
-                          </select>
+                          <p className="res-auto-remark" style={{ margin: 0 }}>
+                            {gradeRemarks[calculateMidtermGrade(scores[subject]?.midtermScore)] || "\u2014"}
+                          </p>
                         )}
                         
                         {scores[subject]?.useCustomRemark && (
@@ -2317,22 +2307,9 @@ Number of Subjects: ${termSubjects.length}`;
                         
                         {/* Show auto-generated remarks dropdown when auto is selected */}
                         {!scores[subject]?.useCustomRemark && (
-                          <select
-                            className="form-control"
-                            value={scores[subject]?.remark || ""}
-                            onChange={(e) =>
-                              handleInputChange(subject, "remark", e.target.value)
-                            }
-                          >
-                            <option value="">Select Auto Remark</option>
-                            {gradeRemarks[
-                              determineGrade(calculateTotal(scores[subject], getClassLevelGroup(studentClassFilter.toLowerCase())), getClassLevelGroup(studentClassFilter.toLowerCase()))
-                            ]?.map((remark, index) => (
-                              <option key={index} value={remark}>
-                                {remark}
-                              </option>
-                            ))}
-                          </select>
+                          <p className="res-auto-remark" style={{ margin: 0 }}>
+                            {gradeRemarks[determineGrade(calculateTotal(scores[subject], getClassLevelGroup(studentClassFilter.toLowerCase())), getClassLevelGroup(studentClassFilter.toLowerCase()))] || "\u2014"}
+                          </p>
                         )}
                         
                         {/* Show custom remark input when custom is selected */}
