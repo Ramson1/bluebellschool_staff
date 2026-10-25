@@ -836,14 +836,17 @@ export default function Result() {
         const defaultSubjects = schoolSubjects[classKey] || [];
 
         try {
-          const normalizedClassNoSpace = studentClass.replace(/\s+/g, '');
-          const classCandidates = Array.from(new Set([studentClass, normalizedClassNoSpace]));
-
+          // Match the existing live row by studentId alone: it is the stable FK
+          // to bluebell_student.id and there is one live result row per student (all
+          // three terms are JSONB columns on it). Filtering by studentClass too
+          // made this lookup miss rows whose stored class label had drifted, one
+          // way a duplicate got inserted. Order newest-first so the authoritative
+          // row wins if legacy duplicates already exist.
           const { data: existingResult, error } = await supabase
             .from("bluebell_result")
             .select("*")
             .eq("studentId", studentId)
-            .in("studentClass", classCandidates);
+            .order("id", { ascending: false });
 
           if (error) {
             throw error;
@@ -1161,6 +1164,17 @@ export default function Result() {
             });
           } else {
             setFetchedResultId(null);
+            // Clear the other-term cache so a later save (after the id is adopted
+            // on first insert) can't spread a previously-viewed student's term
+            // arrays into this row.
+            setTermSubjects({
+              term1Subjects: [],
+              term2Subjects: [],
+              term3Subjects: [],
+              overall1st: {},
+              overall2nd: {},
+              overall3rd: {},
+            });
             handleClassChange(studentClassFilter); // Reset the subjects and scores
           }
         } catch (error) {
@@ -1709,12 +1723,21 @@ ${detailedScores}`;
         });
       } else {
         // Create new record
-        const { error } = await supabase.from("bluebell_result").insert([updatedResultData]);
+        const { data: created, error } = await supabase
+          .from("bluebell_result")
+          .insert([updatedResultData])
+          .select("id");
 
         if (error) {
           toast.error("Error in Response, Reload application! ");
           setIsUploading(false);
           return;
+        }
+
+        // Adopt the new row's id so a subsequent Save on the same form updates
+        // this record instead of inserting another duplicate.
+        if (created && created[0] && created[0].id != null) {
+          setFetchedResultId(created[0].id);
         }
         
         // Send email notification for new results
