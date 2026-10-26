@@ -105,16 +105,23 @@ const getSubjectListForClass = (className) => {
   return [];
 };
 
-// A stored subject entry counts as "filled" only when it carries a real score
-// (untouched subjects are stored with "0"/empty fallbacks by uploadResults)
+// A stored subject entry counts as "filled" when the teacher actually recorded a
+// value for it, including a legitimate 0. Untouched cells are saved as "" (see
+// handleClassChange's initializer and the ?? fallback in uploadResults), so we
+// treat an empty / null / non-numeric field as "not recorded" and any numeric
+// string (including "0") as "recorded". That is what makes a first-entered 0
+// count as 1 subject done, and an exam that has been taken (even at 0 marks)
+// register on the completeness bar instead of silently disappearing.
 const resultEntryHasScore = (entry, isMidterm) => {
   if (!entry) return false;
-  const num = (v) => {
-    const n = parseFloat(v);
-    return Number.isFinite(n) ? n : 0;
+  const filled = (v) => {
+    if (v === null || v === undefined) return false;
+    const s = String(v).trim();
+    if (s === "") return false;
+    return Number.isFinite(parseFloat(s));
   };
-  if (isMidterm) return num(entry.midtermScore ?? entry.test) > 0;
-  return num(entry.examination) > 0 || num(entry.test) > 0 || num(entry.project) > 0;
+  if (isMidterm) return filled(entry.midtermScore ?? entry.test);
+  return filled(entry.examination) || filled(entry.test) || filled(entry.project);
 };
 
 // The school's marking scheme is a hard ceiling on every result cell: Test 30,
