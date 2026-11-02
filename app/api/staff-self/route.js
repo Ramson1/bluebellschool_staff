@@ -15,20 +15,16 @@ const DEPARTMENTS = ['Academic', 'Non-Academic'];
 const DATE_FIELDS = ['date_of_appointment'];
 
 // PATCH /api/staff-self — self-service changes to the signed-in staff member's
-// own account. Three actions, distinguished by the body:
-//  { newEmail }                       → replace the provisional LOGIN email.
-//    Staff start on an admin-created email and swap in their personal one from
-//    the Profile page. Runs on the service-role key server-side; the caller must
-//    be an active staff profile linked to their auth user, and only their own
-//    account is ever touched. Signing in with the full name keeps working
-//    regardless (resolved via bluebell_staff), so a mistyped email is never a
-//    lock-out.
+// own account. Two actions, distinguished by the body:
 //  { action: 'update_profile', profile } → edit their own details, limited to
 //    SELF_EDITABLE. Class/subject assignment and email stay the admin's job.
 //  { action: 'clear_password' }       → forget the password the admin issued.
 //    Called right after the staff member sets their own password, so the admin's
 //    developer-only column can never show a credential that no longer works.
 //    Their new password stays unknown to us — Supabase keeps only its hash.
+// The login email is administrator-owned: any { newEmail } request is refused
+// outright (see the guard at the bottom), so a staff member cannot self-change
+// the address already assigned to them.
 export async function PATCH(request) {
   try {
     const caller = await requireStaffCaller(request);
@@ -166,50 +162,18 @@ export async function PATCH(request) {
       return NextResponse.json({ ok: true, staff: updated });
     }
 
-    const { newEmail } = body || {};
-    const email = String(newEmail || '').trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
-      return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 });
-    }
-
-    const { data: staff, error: fetchErr } = await findOwn();
-    if (fetchErr || !staff) {
-      return NextResponse.json({ error: 'No staff record is linked to this login' }, { status: 403 });
-    }
-    if (staff.status && staff.status !== 'active') {
-      return NextResponse.json({ error: 'Your account is not active — contact the administrator' }, { status: 403 });
-    }
-    if ((staff.email || '').toLowerCase() === email) {
-      return NextResponse.json({ ok: true, email, unchanged: true });
-    }
-
-    // Reject emails already used by another staff profile
-    const { data: clash } = await admin
-      .from('bluebell_staff')
-      .select('id')
-      .ilike('email', email)
-      .neq('id', staff.id)
-      .maybeSingle();
-    if (clash) {
-      return NextResponse.json({ error: 'That email is already used by another staff account' }, { status: 409 });
-    }
-
-    const { error: authErr } = await admin.auth.admin.updateUserById(caller.id, { email });
-    if (authErr) {
-      const taken = /already/i.test(authErr.message || '');
+    // The login email is administrator-owned. Any attempt to change it here —
+    // from the removed Profile card, a stale tab, or a hand-built request — is
+    // refused before touching auth or the profile, so a staff member can never
+    // self-change the address already assigned to them.
+    if (body?.newEmail !== undefined) {
       return NextResponse.json(
-        { error: taken ? 'That email is already registered — use a different one' : `Could not update email: ${authErr.message}` },
-        { status: taken ? 409 : 500 }
+        { error: 'Your login email is set by the administrator and cannot be changed here' },
+        { status: 403 }
       );
     }
 
-    // Keep the profile + teacher-access list in sync with the new login email
-    await admin.from('bluebell_staff').update({ email }).eq('id', staff.id);
-    try {
-      await admin.from('bluebell_teacherauth').update({ email }).eq('email', (staff.email || '').toLowerCase());
-    } catch { /* non-fatal */ }
-
-    return NextResponse.json({ ok: true, email });
+    return NextResponse.json({ error: 'Unknown request' }, { status: 400 });
   } catch (error) {
     console.error('staff-self PATCH error:', error);
     const msg = String(error?.message || '').includes('SERVICE_ROLE')

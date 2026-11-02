@@ -927,10 +927,15 @@ export default function Result() {
                   parseFloat(subject.project || 0) + 
                   parseFloat(subject.examination || 0);
                 
-                const grade = determineGrade(
-                  totalScore,
-                  getClassLevelGroup(studentClassFilter.toLowerCase())
-                );
+                // In midterm view the graded value is the midterm score (out of 30);
+                // running it through the general 100-mark scale would turn a solid
+                // B+ midterm into an "E" remark, making pupils look like they fail.
+                const grade = purpose === "midterm"
+                  ? calculateMidtermGrade(subject.midtermScore || subject.test || 0)
+                  : determineGrade(
+                      totalScore,
+                      getClassLevelGroup(studentClassFilter.toLowerCase())
+                    );
                 
                 // Get the predefined remarks for this grade
                 const autoRemark = grade && gradeRemarks[grade] ? gradeRemarks[grade] : "";
@@ -1079,10 +1084,15 @@ export default function Result() {
                   parseFloat(subject.project || 0) + 
                   parseFloat(subject.examination || 0);
                 
-                const grade = determineGrade(
-                  totalScore,
-                  getClassLevelGroup(studentClassFilter.toLowerCase())
-                );
+                // In midterm view the graded value is the midterm score (out of 30);
+                // running it through the general 100-mark scale would turn a solid
+                // B+ midterm into an "E" remark, making pupils look like they fail.
+                const grade = purpose === "midterm"
+                  ? calculateMidtermGrade(subject.midtermScore || subject.test || 0)
+                  : determineGrade(
+                      totalScore,
+                      getClassLevelGroup(studentClassFilter.toLowerCase())
+                    );
                 
                 // Get the predefined remarks for this grade
                 const autoRemark = grade && gradeRemarks[grade] ? gradeRemarks[grade] : "";
@@ -1097,7 +1107,7 @@ export default function Result() {
                   remark: subject.remark || "",
                   useCustomRemark: isCustomRemark,
                   customRemark: isCustomRemark ? subject.remark : "",
-                  midtermScore: subject.midtermScore || "",
+                  midtermScore: subject.midtermScore || subject.test || "",
                   midtermGrade: subject.midtermGrade || "",
                 };
               } else {
@@ -1314,22 +1324,68 @@ export default function Result() {
     });
   }
 
+  // A score field that a CBT exam auto-filled is distinct from one a teacher
+  // typed: the stored term entry carries a `cbt` marker / `cbtKey`, and
+  // `cbt.section` records which field the exam wrote ("test" for a midterm
+  // sitting, otherwise "examination"). These helpers locate that field for the
+  // subject being rendered so the editor can lock it, and the save path can
+  // preserve the stored value, for staff without the admin grant.
+  const storedCbtEntryFor = (subject) => {
+    const tk =
+      termFilter === "1st term"
+        ? "term1Subjects"
+        : termFilter === "2nd term"
+          ? "term2Subjects"
+          : "term3Subjects";
+    const list = (termSubjects && termSubjects[tk]) || [];
+    return (
+      list.find(
+        (e) => normSub(e.subjectName) === normSub(subject) && (e.cbt || e.cbtKey)
+      ) || null
+    );
+  };
+  const cbtFieldOfEntry = (entry) => {
+    if (!entry) return null;
+    const section = entry.cbt && entry.cbt.section;
+    if (section === "test" || section === "midterm") return "test";
+    if (section === "examination" || section === "exam") return "examination";
+    return purpose === "midterm" ? "test" : "examination";
+  };
+  // Is this (subject, key) cell a CBT-auto-filled score this staff member may
+  // not edit? The single midterm cell ("midtermScore") maps to the stored test
+  // field, so it is the locked one when the exam filled test.
+  const isCbtLockedCell = (subject, key) => {
+    if (scope?.canEditCbtScores) return false;
+    const entry = storedCbtEntryFor(subject);
+    if (!entry) return false;
+    const effKey = key === "midtermScore" ? "test" : key;
+    return effKey === cbtFieldOfEntry(entry);
+  };
+
   // Props for a score cell: the allowed maximum plus the warning styling that
-  // stays on the input until the teacher edits it again
+  // stays on the input until the teacher edits it again. A locked CBT cell is
+  // rendered read-only/disabled ahead of the cap styling.
   const scoreCellProps = (subject, key) => {
     const max = SCORE_MAX[key];
     const cappedAt = clampedCells[`${subject}::${key}`];
+    const cbtLocked = isCbtLockedCell(subject, key);
     return {
       max: max !== undefined ? max : undefined,
       min: max !== undefined ? 0 : undefined,
-      style: cappedAt
-        ? { borderColor: "#dc3545", boxShadow: "0 0 0 2px rgba(220, 53, 69, 0.2)" }
-        : undefined,
-      title: cappedAt
-        ? `Capped at ${max} marks — a ${key} entry cannot hold more`
-        : max !== undefined
-          ? `Maximum ${max} marks`
+      readOnly: cbtLocked || undefined,
+      disabled: cbtLocked || undefined,
+      style: cbtLocked
+        ? { borderColor: "#94a3b8", background: "rgba(148,163,184,0.18)", cursor: "not-allowed" }
+        : cappedAt
+          ? { borderColor: "#dc3545", boxShadow: "0 0 0 2px rgba(220, 53, 69, 0.2)" }
           : undefined,
+      title: cbtLocked
+        ? "CBT exam score — editing is locked for your account. Ask the administrator to allow CBT score editing."
+        : cappedAt
+          ? `Capped at ${max} marks — a ${key} entry cannot hold more`
+          : max !== undefined
+            ? `Maximum ${max} marks`
+            : undefined,
     };
   };
   const calculateTotal = (subjectScores, classLevelGroup) => {
@@ -1361,6 +1417,24 @@ export default function Result() {
     if (score >= 17) return "C";
     if (score >= 14) return "D";
     return "E";
+  };
+
+  // Aggregates used when VIEWING midterm results: the sum of the per-subject
+  // midterm scores (30 marks each) and that average on the midterm scale.
+  // Kept separate from calculateOverallTotal/Grade, which the general-exam
+  // upload relies on, so the stored overall1st/2nd/3rd general aggregates
+  // (and the general view of them) stay untouched.
+  const midtermOverallTotal = () =>
+    subjects.reduce((sum, subject) => {
+      const s = scores[subject] || {};
+      const raw = s.midtermScore !== "" && s.midtermScore != null ? s.midtermScore : s.test;
+      const v = parseFloat(raw);
+      return sum + (isNaN(v) ? 0 : v);
+    }, 0);
+
+  const midtermOverallGrade = () => {
+    const average = subjects.length > 0 ? midtermOverallTotal() / subjects.length : 0;
+    return calculateMidtermGrade(Math.round(average));
   };
 
   const calculateOverallTotal = (studentClass) => {
@@ -1586,12 +1660,40 @@ export default function Result() {
     // survive: rebuild each owned entry in place, then append owned subjects
     // that were not stored yet.
     const storedTermSubjects = (termSubjects && termSubjects[termKey]) || [];
+    const canEditCbt = !!scope?.canEditCbtScores;
     const mergedTermSubjects = storedTermSubjects.map((entry) => {
       if (!ownsSubjectIn(studentClass, entry.subjectName)) return entry;
       const rebuilt = termSubjectsToUpload.find(
         (s) => normSub(s.subjectName) === normSub(entry.subjectName)
       );
-      return rebuilt || entry;
+      if (!rebuilt) return entry;
+      // A CBT-auto-filled score is locked for staff without the grant: force the
+      // stored value back onto the rebuilt row, recompute the derived marks, and
+      // keep the CBT marker so the entry stays recognised next time. When the
+      // staff member is permitted, their edit stands (unchanged behaviour).
+      if ((entry.cbt || entry.cbtKey) && !canEditCbt) {
+        const cbtField = cbtFieldOfEntry(entry);
+        const storedCbtVal =
+          entry[cbtField] ?? (purpose === "midterm" ? entry.midtermScore : undefined) ?? "";
+        const merged = { ...rebuilt, [cbtField]: storedCbtVal };
+        if (purpose === "midterm") {
+          merged.test = storedCbtVal;
+          merged.midtermScore = storedCbtVal;
+          merged.total = storedCbtVal;
+          const g = calculateMidtermGrade(storedCbtVal);
+          merged.grade = g;
+          merged.midtermGrade = g;
+        } else {
+          const grp = getClassLevelGroup(studentClass.toLowerCase());
+          const total = calculateTotal(merged, grp);
+          merged.total = total;
+          merged.grade = determineGrade(total, grp);
+        }
+        merged.cbt = entry.cbt;
+        merged.cbtKey = entry.cbtKey;
+        return merged;
+      }
+      return rebuilt;
     });
     const notStoredYet = termSubjectsToUpload.filter(
       (s) => !storedTermSubjects.some((e) => normSub(e.subjectName) === normSub(s.subjectName))
@@ -2377,8 +2479,8 @@ Number of Subjects: ${termSubjects.length}`;
         <div className="res-card res-overall mt-4">
           <div className="res-card-head"><RiAwardLine /> Overall Summary</div>
           <div className="res-overall-tops">
-            <div className="res-statbox"><span className="k">Overall Total</span><span className="v">{scores?.overallTotalFromDb || calculateOverallTotal(studentClassFilter)}</span></div>
-            <div className="res-statbox"><span className="k">Overall Grade</span><span className="v">{scores?.overallGradeFromDb || calculateOverallGrade(studentClassFilter)}</span></div>
+            <div className="res-statbox"><span className="k">Overall Total</span><span className="v">{purpose === "midterm" ? midtermOverallTotal() : (scores?.overallTotalFromDb || calculateOverallTotal(studentClassFilter))}</span></div>
+            <div className="res-statbox"><span className="k">Overall Grade</span><span className="v">{purpose === "midterm" ? midtermOverallGrade() : (scores?.overallGradeFromDb || calculateOverallGrade(studentClassFilter))}</span></div>
           </div>
           <div className="res-remark">
             <h5>Teacher&apos;s Remark</h5>
@@ -2414,7 +2516,7 @@ Number of Subjects: ${termSubjects.length}`;
     
     {/* Show auto-generated overall remark when auto is selected */}
     {!scores?.useCustomOverallRemark && (
-      <p className="res-auto-remark">Auto Teacher&apos;s Remark: {scores?.overallRemarkFromDb || overallRemark(studentClassFilter)}</p>
+      <p className="res-auto-remark">Auto Teacher&apos;s Remark: {purpose === "midterm" ? (gradeRemarks[midtermOverallGrade()] || "") : (scores?.overallRemarkFromDb || overallRemark(studentClassFilter))}</p>
     )}
     
     {/* Show custom overall remark input when custom is selected */}
@@ -2714,6 +2816,20 @@ const PreviewResultComponent = ({ studentName, studentClass, term, subjects, sco
     const average = validSubjects.length > 0 ? overallTotal / validSubjects.length : 0;
     return determineGrade(average, classLevelGroup);
   };
+  // Midterm preview aggregates the per-subject midterm scores (out of 30
+  // each) and grades them on the midterm scale — the general
+  // test+project+examination total must never be used for a midterm view.
+  const midtermOverallTotal = () =>
+    validSubjects.reduce((sum, subject) => {
+      const s = scores[subject] || {};
+      const raw = s.midtermScore !== "" && s.midtermScore != null ? s.midtermScore : s.test;
+      const v = parseFloat(raw);
+      return sum + (isNaN(v) ? 0 : v);
+    }, 0);
+  const midtermOverallGrade = () => {
+    const average = validSubjects.length > 0 ? midtermOverallTotal() / validSubjects.length : 0;
+    return calculateMidtermGrade(Math.round(average));
+  };
   return (
     <div className="res-pv">
       <h2>
@@ -2775,15 +2891,20 @@ const PreviewResultComponent = ({ studentName, studentClass, term, subjects, sco
           })}
         </tbody>
       </table>
-      {purpose !== "midterm" && (
-        <div className="res-pv-foot">
-          <p className="line">Overall Total: {calculateOverallTotal()}</p>
-          <p className="line">Overall Grade: {validSubjects.length > 0 ? calculateOverallGrade() : "N/A"}</p>
-          <p className="line" style={{ marginTop: "12px" }}>
-            Principal&apos;s Comment: {useCustomPrincipalRemark ? (customPrincipalRemark || "N/A") : (overallPrincipalRemark ? overallPrincipalRemark(studentClass) : "N/A")}
-          </p>
-        </div>
-      )}
+      <div className="res-pv-foot">
+        <p className="line">
+          {purpose === "midterm" ? "Midterm Total (30 per subject): " : "Overall Total: "}
+          {purpose === "midterm" ? midtermOverallTotal() : calculateOverallTotal()}
+        </p>
+        <p className="line">
+          Overall Grade: {validSubjects.length > 0
+            ? (purpose === "midterm" ? midtermOverallGrade() : calculateOverallGrade())
+            : "N/A"}
+        </p>
+        <p className="line" style={{ marginTop: "12px" }}>
+          Principal&apos;s Comment: {useCustomPrincipalRemark ? (customPrincipalRemark || "N/A") : (overallPrincipalRemark ? overallPrincipalRemark(studentClass) : "N/A")}
+        </p>
+      </div>
     </div>
   );
 };

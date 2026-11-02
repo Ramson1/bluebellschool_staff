@@ -5,17 +5,17 @@ import { supabase } from "../supabaseClient.js";
 import { StaffContext } from "../components/StaffShell.jsx";
 import { logAction } from "../api/auditLog.js";
 import { toast } from "react-toastify";
-import { RiUserLine, RiLockLine, RiTimeLine, RiSaveLine, RiMailLine, RiCameraLine, RiUploadLine, RiArrowGoBackLine, RiLoader4Line } from "react-icons/ri";
+import { RiUserLine, RiLockLine, RiTimeLine, RiSaveLine, RiCameraLine, RiUploadLine, RiArrowGoBackLine, RiLoader4Line } from "react-icons/ri";
 import "../styles/AdminPages.css";
 
 // Self-service profile. A staff member edits their own details here — name, sex,
 // address, phone, designation, department, date of appointment and passport
-// photo — while the login email (its own card below), the class/subject
+// photo — while the login email, the class/subject
 // assignment, staff number and status stay the administrator's, enforced
 // server-side by the allowlist in app/api/staff-self/route.js rather than by
 // hiding fields in this page.
 // Password change uses auth.updateUser (anon key, signed-in user only); the
-// email change and profile write go through /api/staff-self, which runs on the
+// the profile write goes through /api/staff-self, which runs on the
 // service-role key and touches only the caller's own row.
 
 // Fields this page lets the staff member change, mirroring SELF_EDITABLE on the
@@ -46,8 +46,6 @@ export default function StaffProfile() {
   const [pw, setPw] = useState({ next: "", confirm: "" });
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState([]);
-  const [emailForm, setEmailForm] = useState({ next: "", confirm: "" });
-  const [emailBusy, setEmailBusy] = useState(false);
 
   const [form, setForm] = useState(blankForm());
   const [baseline, setBaseline] = useState(blankForm());
@@ -161,35 +159,10 @@ export default function StaffProfile() {
     toast.success("Password updated. Use it the next time you sign in.");
   };
 
-  const changeEmail = async () => {
-    const next = emailForm.next.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(next)) { toast.warn("Enter a valid email address."); return; }
-    if (next !== emailForm.confirm.trim().toLowerCase()) { toast.error("The two emails do not match."); return; }
-    setEmailBusy(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch("/api/staff-self", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
-        body: JSON.stringify({ newEmail: next }),
-      });
-      const out = await res.json().catch(() => ({}));
-      if (!res.ok || out.error) throw new Error(out.error || "Could not update email");
-      logAction(supabase, { email: next, name: staff?.name, role: "staff", action: "staff_email_change", targetTable: "bluebell_staff", details: { previous: staff.email } });
-      setEmailForm({ next: "", confirm: "" });
-      toast.success(out.unchanged ? "That is already your email." : `Login email updated to ${next}. You can still sign in with your full name too.`);
-      scope.reload?.();
-    } catch (err) {
-      toast.error(err.message || "Could not update email");
-    } finally {
-      setEmailBusy(false);
-    }
-  };
-
   if (!scope || !staff) return null;
 
-  // Deliberately not editable on this page. The email has its own self-service
-  // card (below right); the rest belongs to the administrator.
+  // Deliberately not editable on this page — these belong to the administrator,
+  // including the login email, which staff cannot self-change once assigned.
   const lockedRows = [
     ["Staff No", staff.staff_no || "—"],
     ["Class", staff.class_assigned || "—"],
@@ -261,7 +234,7 @@ export default function StaffProfile() {
                 <div className="ap-field">
                   <label className="ap-label">Login Email</label>
                   <input className="ap-input" value={staff.email || ""} readOnly disabled />
-                  <span className="ap-hint">Changed on the “Change sign-in email” card.</span>
+                  <span className="ap-hint">Set by the administrator — it cannot be changed here.</span>
                 </div>
                 <div className="ap-field" style={{ gridColumn: "1 / -1" }}>
                   <label className="ap-label">Address</label>
@@ -318,27 +291,6 @@ export default function StaffProfile() {
         </div>
 
         <div className="col-lg-6">
-          <div className="ap-card mb-3">
-            <div className="ap-card-head"><span className="ic"><RiMailLine /></span> Change sign-in email</div>
-            <div className="pad">
-              <p className="ap-muted" style={{ fontSize: "0.82rem" }}>
-                The admin created a provisional email for your first login. Replace it with your
-                personal email — from then on sign in with that email (or simply your full name).
-              </p>
-              <div className="mb-3">
-                <label className="ap-label">New email</label>
-                <input className="ap-input" type="email" autoComplete="email" placeholder="you@gmail.com" value={emailForm.next} onChange={(e) => setEmailForm((p) => ({ ...p, next: e.target.value }))} />
-              </div>
-              <div className="mb-3">
-                <label className="ap-label">Confirm new email</label>
-                <input className="ap-input" type="email" autoComplete="email" value={emailForm.confirm} onChange={(e) => setEmailForm((p) => ({ ...p, confirm: e.target.value }))} />
-              </div>
-              <button className="ap-btn blue" disabled={emailBusy || !emailForm.next || !emailForm.confirm} onClick={changeEmail}>
-                <RiSaveLine /> {emailBusy ? "Updating…" : "Update login email"}
-              </button>
-            </div>
-          </div>
-
           <div className="ap-card mb-3">
             <div className="ap-card-head"><span className="ic"><RiLockLine /></span> Change password</div>
             <div className="pad">

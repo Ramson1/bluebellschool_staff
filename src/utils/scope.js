@@ -32,8 +32,13 @@ export const RECORDS_VIEWER_DESIGNATIONS = [
 const STAFF_COLS_BASE =
   "id, name, staff_no, sex, designation, department, email, phone, address, class_assigned, subjects, profile_pic, status, auth_user_id";
 const STAFF_COLS =
-  "id, name, staff_no, sex, designation, department, email, phone, address, class_assigned, subjects, profile_pic, date_of_appointment, status, auth_user_id";
-const isMissingColumn = (err) => /date_of_appointment|does not exist|column .* does not/i.test(String(err?.message || ""));
+  "id, name, staff_no, sex, designation, department, email, phone, address, class_assigned, subjects, profile_pic, date_of_appointment, can_edit_cbt_scores, status, auth_user_id";
+// These columns are added by later migrations (jmis_staff_date_of_appointment.sql,
+// jmis_staff_can_edit_cbt_scores.sql). Older databases that predate them must not
+// fail the whole staff-scope lookup (every portal page resolves through here), so
+// a select rejected for an unknown column is retried with those columns dropped.
+const isMissingColumn = (err) =>
+  /date_of_appointment|can_edit_cbt_scores|does not exist|column .* does not/i.test(String(err?.message || ""));
 
 export async function fetchStaffScope(email, userId) {
   if (!email && !userId) return null;
@@ -157,6 +162,12 @@ export async function fetchStaffScope(email, userId) {
     isGeneral: assignments.length === 0,
     // Read-only, school-wide Records view is unlocked by designation alone.
     recordsAccess,
+    // Per-staff grant, set by the administrator on Staff Accounts. Default false
+    // (pre-migration databases report the column as absent → falsy → locked), so
+    // a staff member can only edit CBT-auto-filled exam scores once explicitly
+    // allowed. The staff Result editor uses this to lock the CBT cell + preserve
+    // the stored score on save; a teacher's own CA entries are never affected.
+    canEditCbtScores: staff.can_edit_cbt_scores === true,
     // Non-Academic staff (minders, assistants, security, cleaners…) may not
     // touch anything academic-related, even if a class assignment exists.
     isAcademic: String(staff.department || "").toLowerCase() !== "non-academic",
