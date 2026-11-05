@@ -97,7 +97,7 @@ export default function ImpersonatePage() {
     <div className="staff-login-wrap">
       <div className="staff-login-card">
         <div className="staff-login-brand">
-          <img src="/logo.jpg" alt="Bluebell logo" />
+          <img src="/logo.jpg" alt="Black-Box logo" />
           <div>
             <h1>Staff Portal</h1>
             <p>Administrator preview</p>

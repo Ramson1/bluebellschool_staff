@@ -10,7 +10,7 @@ import { authorField } from "./ownership.js";
 
 // Designations that unlock the school-wide read-only Records view (Staff /
 // Students / Payments / Attendance / Results + CSV download). Kept in one
-// place and mirrored byte-for-byte into Spring/Bluebell. Matching is
+// place and mirrored byte-for-byte into Spring/Black-Box. Matching is
 // lower-cased + trimmed, so edit the spellings here in lowercase.
 // NOTE: this is purely a READ capability — it never touches the assignment
 // scope (allClasses/classTeacherClasses/rosterClasses), so guardWrite keeps

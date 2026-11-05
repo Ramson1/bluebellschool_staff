@@ -123,12 +123,14 @@ const CbtQuestions = () => {
     .slice()
     .sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" }));
 
-  // Subjects offered for the class picked in the create form: a form (class)
-  // teacher may quiz on any subject, a subject teacher only the subjects the
-  // admin assigned them in THAT class. guardWrite's mayPair stays the save-time
-  // backstop, this just stops the picker from offering impossible values.
+  // Subjects offered for the class picked in the create/edit form: a form
+  // (class) teacher may quiz on any subject, a subject teacher only the subjects
+  // the admin assigned them in THAT class. When no class is chosen yet the list
+  // is EMPTY (pick a class first) so Add and Edit behave identically and always
+  // respect scope. guardWrite's mayPair stays the save-time backstop.
   const subjectChoicesFor = (cls) => {
-    if (!scope || scope.isGeneral || !cls) return allSubjects;
+    if (!scope || scope.isGeneral) return allSubjects;
+    if (!cls) return [];
     if (scope.classTeacherClasses.some((x) => normCls(x) === normCls(cls))) return allSubjects;
     return scope.subjectPairs
       .filter((p) => normCls(p.class) === normCls(cls))
@@ -1042,7 +1044,7 @@ ${questionsList}`;
     setQuestionsData(updatedQuestions);
   };
 
-  const subjectImage = 'https://BLUEBELL_SUPABASE_REF_PLACEHOLDER.supabase.co/storage/v1/object/public/cbt//';
+  const subjectImage = 'https://btnatydmfunhwgoeguus.supabase.co/storage/v1/object/public/cbt//';
 
   const formatDuration = (duration) => {
     if (duration < 60) {
@@ -1427,35 +1429,42 @@ ${questionsList}`;
                 </small>
               )}
             </Form.Group>
-            <Form.Group controlId="formSubject">
-              <Form.Label className="form-label">Subject:</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="Enter subject"
-                value={newSubject}
-                onChange={(e) => setNewSubject(e.target.value)}
-                className="form-control"
-                
-                list="subjectOptions"
-              />
-              <datalist id="subjectOptions">
-                {subjectChoicesFor(newClass).map((subject, index) => (
-                  <option key={index} value={subject} />
-                ))}
-              </datalist>
-            </Form.Group>
             <Form.Group controlId="formClass">
               <Form.Label  className="form-label">Class:</Form.Label>
               <Form.Select
                 value={newClass}
-                    onChange={(e) => setNewClass(e.target.value)}
-                    className="form-control"
+                onChange={(e) => {
+                  const cls = e.target.value;
+                  setNewClass(cls);
+                  // Drop a subject the teacher isn't assigned to in the new class
+                  if (newSubject && !subjectChoicesFor(cls).includes(newSubject)) {
+                    setNewSubject('');
+                  }
+                }}
+                className="form-control"
                 
               >
                 <option value="">Select class</option>
                 {myClassOptions.map((cls) => (
                   <option key={cls} value={cls}>{cls}</option>
                 ))}
+              </Form.Select>
+            </Form.Group>
+            <Form.Group controlId="formSubject">
+              <Form.Label className="form-label">Subject:</Form.Label>
+              <Form.Select
+                value={newSubject}
+                onChange={(e) => setNewSubject(e.target.value)}
+                className="form-control"
+                disabled={!!(scope && !scope.isGeneral && !newClass)}
+              >
+                <option value="">{newClass ? 'Select subject' : 'Select a class first'}</option>
+                {subjectChoicesFor(newClass).map((subject, index) => (
+                  <option key={index} value={subject}>{subject}</option>
+                ))}
+                {newSubject && !subjectChoicesFor(newClass).includes(newSubject) && (
+                  <option value={newSubject}>{newSubject}</option>
+                )}
               </Form.Select>
             </Form.Group>
             <Form.Group controlId="formTerm">

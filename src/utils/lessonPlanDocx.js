@@ -9,7 +9,7 @@
 // @param fileName optional download name; defaults to a descriptive one
 
 const DEFAULT_SCHOOL = {
-  name: "Bluebell International School",
+  name: "Black-Box Institution",
   location: "BLUEBELL_LOCATION_PLACEHOLDER",
 };
 

@@ -83,10 +83,10 @@ export default function StaffLogin() {
       <ToastContainer position="top-center" />
       <div className="staff-login-card">
         <div className="staff-login-brand">
-          <img src="/logo.jpg" alt="Bluebell logo" />
+          <img src="/logo.jpg" alt="Black-Box logo" />
           <div>
             <h1>Staff Portal</h1>
-            <p>Bluebell International School</p>
+            <p>Black-Box Institution</p>
           </div>
         </div>
 
@@ -96,7 +96,7 @@ export default function StaffLogin() {
             <input
               type="text"
               className="ap-input mb-3"
-              placeholder="you@bluebellschool.com  ·  or your full name"
+              placeholder="you@blackboxtech.online  ·  or your full name"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               required

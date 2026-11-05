@@ -140,7 +140,7 @@ export default function LessonPlansPage() {
   // the printable LessonPlanDoc layout.
   const downloadDocx = async (plan) => {
     try {
-      await exportLessonPlanToDocx(plan, { name: "Bluebell International School", location: "BLUEBELL_LOCATION_PLACEHOLDER", logo: "/logo.jpg" });
+      await exportLessonPlanToDocx(plan, { name: "Black-Box Institution", location: "BLUEBELL_LOCATION_PLACEHOLDER", logo: "/logo.jpg" });
       toast.success("Lesson plan saved as DOCX.");
     } catch (e) {
       toast.error("DOCX export failed: " + (e?.message || e));
@@ -316,7 +316,7 @@ export default function LessonPlansPage() {
             </div>
           </div>
           <div className="lp-overlay-scroll">
-            <LessonPlanDoc plan={preview} school={{ name: "Bluebell International School", logo: "/logo.jpg" }} />
+            <LessonPlanDoc plan={preview} school={{ name: "Black-Box Institution", logo: "/logo.jpg" }} />
           </div>
         </div>
       )}

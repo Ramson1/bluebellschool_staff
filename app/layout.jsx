@@ -5,8 +5,8 @@ import "../src/styles/theme.css";
 import "../src/styles/StaffShell.css";
 
 export const metadata = {
-  title: "Bluebell Staff Portal",
-  description: "Staff portal for Bluebell International School",
+  title: "Black-Box Staff Portal",
+  description: "Staff portal for Black-Box Institution",
   icons: { icon: "/favicon.ico?v=4", apple: "/apple-touch-icon.png" },
 };
 

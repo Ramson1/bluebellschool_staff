@@ -11,7 +11,7 @@ import "../styles/LessonPlanDoc.css";
 // window.print(); the @media rules in LessonPlanDoc.css hide everything else.
 
 const DEFAULT_SCHOOL = {
-  name: "Bluebell International School",
+  name: "Black-Box Institution",
   location: "BLUEBELL_LOCATION_PLACEHOLDER",
   logo: "/logo.jpg",
 };

@@ -4,7 +4,7 @@
 // the CSS media-query rules fall back to the OS preference automatically.
 //
 // Same key/mechanism as the admin portal (bluebellschool/src/utils/theme.js) so the
-// dark/light choice is consistent across the Bluebell apps.
+// dark/light choice is consistent across the Black-Box apps.
 
 export const THEME_KEY = "jmis-theme";
 

@@ -1,6 +1,6 @@
 // Canonical class list — single source of truth for class ordering/filters in
 // the staff portal, kept byte-identical to jmischool/src/utils/classOptions.js
-// and mirrored into Spring/Bluebell.
+// and mirrored into Spring/Black-Box.
 // Stored class values in Supabase are inconsistent ("YEAR 7", "nursery1",
 // "Year 5"), so compare/filter through canonClass() instead of raw string
 // equality against these labels.
