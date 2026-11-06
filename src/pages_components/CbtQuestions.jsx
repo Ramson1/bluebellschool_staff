@@ -1044,7 +1044,7 @@ ${questionsList}`;
     setQuestionsData(updatedQuestions);
   };
 
-  const subjectImage = 'https://btnatydmfunhwgoeguus.supabase.co/storage/v1/object/public/cbt//';
+  const subjectImage = `${process.env.NEXT_PUBLIC_SUPABASE_URL || ''}/storage/v1/object/public/cbt/`;
 
   const formatDuration = (duration) => {
     if (duration < 60) {
