@@ -49,7 +49,7 @@ export async function fetchStaffScope(email, userId) {
   let cols = STAFF_COLS;
   if (userId) {
     ({ data: staff, error } = await supabase
-      .from("jmis_staff")
+      .from("bluebell_staff")
       .select(cols)
       .eq("auth_user_id", userId)
       .limit(1)
@@ -57,7 +57,7 @@ export async function fetchStaffScope(email, userId) {
     if (error && isMissingColumn(error)) {
       cols = STAFF_COLS_BASE;
       ({ data: staff, error } = await supabase
-        .from("jmis_staff")
+        .from("bluebell_staff")
         .select(cols)
         .eq("auth_user_id", userId)
         .limit(1)
@@ -67,7 +67,7 @@ export async function fetchStaffScope(email, userId) {
   }
   if (!staff && email) {
     ({ data: staff, error } = await supabase
-      .from("jmis_staff")
+      .from("bluebell_staff")
       .select(cols)
       .ilike("email", email)
       .limit(1)
@@ -75,7 +75,7 @@ export async function fetchStaffScope(email, userId) {
     if (error && isMissingColumn(error)) {
       cols = STAFF_COLS_BASE;
       ({ data: staff, error } = await supabase
-        .from("jmis_staff")
+        .from("bluebell_staff")
         .select(cols)
         .ilike("email", email)
         .limit(1)
