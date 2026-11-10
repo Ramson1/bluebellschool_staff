@@ -14,6 +14,7 @@ const AssignmentsPage = makeAcademicsPage({
   withTerm: true,
   withSession: true,
   withFile: "attachment_url",
+  multiClass: true,
   columns: [
     { key: "class", label: "Class", type: "select", required: true },
     { key: "subject", label: "Subject", type: "select", required: true },

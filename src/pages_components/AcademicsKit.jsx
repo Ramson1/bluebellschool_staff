@@ -46,7 +46,16 @@ export function useScopedOptions() {
     if (scope.classTeacherClasses.some((c) => normCls(c) === normCls(cls))) return ALL_SUBJECTS;
     return scope.subjectPairs.filter((p) => normCls(p.class) === normCls(cls)).map((p) => p.subject);
   };
-  return { scope, classes, subjectsFor };
+  // Subjects valid across ALL selected classes (intersection) — used for
+  // multi-class assignment creation so the same subject applies to every class.
+  const subjectsForAll = (clsList) => {
+    if (!clsList || clsList.length === 0) return ALL_SUBJECTS;
+    return clsList.reduce((acc, cls) => {
+      const subs = subjectsFor(cls);
+      return acc ? acc.filter((s) => subs.includes(s)) : subs;
+    }, null);
+  };
+  return { scope, classes, subjectsFor, subjectsForAll };
 }
 
 // Theme-aware drag & drop attachment picker that replaces the raw browser
@@ -117,7 +126,7 @@ function FileDrop({ value, name, busy, onFile, onClear }) {
  */
 export function makeAcademicsPage(config) {
   return function AcademicsPage() {
-    const { scope, classes, subjectsFor } = useScopedOptions();
+    const { scope, classes, subjectsFor, subjectsForAll } = useScopedOptions();
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
@@ -128,6 +137,7 @@ export function makeAcademicsPage(config) {
     const [form, setForm] = useState({});
     const [fileBusy, setFileBusy] = useState(false);
     const [fileNames, setFileNames] = useState({});
+    const [selectedClasses, setSelectedClasses] = useState([]);
 
     const load = () => {
       if (!config.table) return;
@@ -172,14 +182,24 @@ export function makeAcademicsPage(config) {
 
     const openNew = () => {
       const initial = { class: classes[0] || "", created_by: scope?.staff?.email };
+      if (config.multiClass) {
+        initial.classes = [];
+        delete initial.class;
+      }
       for (const c of columns) if (c.key === "academic_session" && scope?.session) initial[c.key] = scope.session;
       setForm(initial);
+      setSelectedClasses([]);
       setEditing(null);
       setShow(true);
     };
     const openEdit = (r) => {
       const own = assertOwnership(scope, config.table, r);
       if (!own.ok) { toast.warn(own.reason); return; }
+      if (config.multiClass && r.classes) {
+        setSelectedClasses(Array.isArray(r.classes) ? r.classes : [r.classes]);
+      } else {
+        setSelectedClasses([]);
+      }
       setForm({ ...r }); setEditing(r); setShow(true);
     };
     const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -200,13 +220,21 @@ export function makeAcademicsPage(config) {
     };
 
     const validate = () => {
-      if (!form.class) return "Select a class.";
+      if (config.multiClass) {
+        if (!selectedClasses || selectedClasses.length === 0) return "Select at least one class.";
+      } else {
+        if (!form.class) return "Select a class.";
+      }
       if (columns.some((c) => c.key === "subject") && !form.subject) return "Select a subject.";
       for (const c of columns) {
         if (c.required && !String(form[c.key] ?? "").trim()) return `${c.label} is required.`;
       }
-      if (!scope?.mayTeach?.(form.class, form.subject || "")) {
-        return "That class/subject is outside your assignment.";
+      // Scope check: every selected class must be teachable by this staff member
+      const checkClasses = config.multiClass ? selectedClasses : [form.class];
+      for (const cls of checkClasses) {
+        if (!scope?.mayTeach?.(cls, form.subject || "")) {
+          return `Class ${cls} / subject ${form.subject || "—"} is outside your assignment.`;
+        }
       }
       return null;
     };
@@ -215,44 +243,51 @@ export function makeAcademicsPage(config) {
       const err = validate();
       if (err) { toast.warn(err); return; }
       setSaving(true);
-      const payload = {};
-      for (const c of columns) {
-        let v = form[c.key];
-        if (v === undefined) continue;
-        if (c.type === "number") v = v === "" ? null : Number(v);
-        payload[c.key] = v;
-      }
-      payload.class = classes.find((c) => normCls(c) === normCls(payload.class)) || payload.class; // canonical spelling
-      if (payload.subject) {
-        const opts = subjectsFor(payload.class);
-        payload.subject = opts.find((s) => normSub(s) === normSub(payload.subject)) || payload.subject;
-      }
-      // Attribute the record to the writer (bluebell_notes → uploaded_by,
-      // bluebell_assignments → created_by). The network guard refuses a payload
-      // naming another teacher, and refuses a new row with no author at all,
-      // so an account without an email fails loudly instead of storing a row
-      // nobody owns.
       const authorKey = config.authorField || authorField(config.table);
+      const classesToSave = config.multiClass ? selectedClasses : [form.class];
+      const payloads = classesToSave.map((cls) => {
+        const payload = {};
+        for (const c of columns) {
+          let v = form[c.key];
+          if (v === undefined) continue;
+          if (c.type === "number") v = v === "" ? null : Number(v);
+          payload[c.key] = v;
+        }
+        payload.class = classes.find((c) => normCls(c) === normCls(cls)) || cls; // canonical spelling
+        if (payload.subject) {
+          const opts = subjectsFor(payload.class);
+          payload.subject = opts.find((s) => normSub(s) === normSub(payload.subject)) || payload.subject;
+        }
+        payload[authorKey] = scope?.staff?.email || null;
+        return payload;
+      });
       if (editing) {
         const owned = assertOwnership(scope, config.table, editing);
         if (!owned.ok) { toast.warn(owned.reason); setSaving(false); return; }
+        const { data, error } = await supabase.from(config.table).update(payloads[0]).eq("id", editing.id).select();
+        setSaving(false);
+        if (error) { toast.error(error.message); return; }
+        logAction(supabase, {
+          email: scope?.staff?.email, name: scope?.staff?.name, role: "staff",
+          action: `${config.table}_update`, targetTable: config.table, recordId: data?.[0]?.id,
+          details: { class: payloads[0].class, subject: payloads[0].subject, title: payloads[0].title || payloads[0].topic || "" },
+        });
+        setShow(false);
+        setRows((rs) => rs.map((r) => (r.id === editing.id ? { ...r, ...data[0] } : r)));
+        toast.success("Updated.");
+        return;
       }
-      payload[authorKey] = scope?.staff?.email || null;
-      const { data, error } = editing
-        ? await supabase.from(config.table).update(payload).eq("id", editing.id).select()
-        : await supabase.from(config.table).insert([payload]).select();
+      const { data, error } = await supabase.from(config.table).insert(payloads).select();
       setSaving(false);
       if (error) { toast.error(error.message); return; }
       logAction(supabase, {
         email: scope?.staff?.email, name: scope?.staff?.name, role: "staff",
-        action: editing ? `${config.table}_update` : `${config.table}_add`,
-        targetTable: config.table, recordId: data?.[0]?.id,
-        details: { class: payload.class, subject: payload.subject, title: payload.title || payload.topic || "" },
+        action: `${config.table}_add`, targetTable: config.table, recordId: data?.[0]?.id,
+        details: { class: payloads[0].class, subject: payloads[0].subject, title: payloads[0].title || payloads[0].topic || "" },
       });
       setShow(false);
-      if (editing) setRows((rs) => rs.map((r) => (r.id === editing.id ? { ...r, ...data[0] } : r)));
-      else setRows((rs) => [data[0], ...rs]);
-      toast.success(editing ? "Updated." : "Saved.");
+      setRows((rs) => [...data, ...rs]);
+      toast.success(`Saved to ${payloads.length} class${payloads.length === 1 ? "" : "es"}.`);
     };
 
     const remove = async (r) => {
@@ -345,18 +380,44 @@ export function makeAcademicsPage(config) {
           </Modal.Header>
           <Modal.Body className="ap-modal-body">
             <div className="row g-3">
-              {columns.map((c) => (
+                {columns.map((c) => (
                 <div className={c.full ? "col-12" : "col-md-6"} key={c.key}>
                   <label className="ap-label">{c.label}{c.required ? " *" : ""}</label>
                   {c.type === "textarea" ? (
                     <textarea className="ap-input" rows={c.rows || 4} value={form[c.key] || ""} placeholder={c.placeholder} onChange={(e) => setField(c.key, e.target.value)} />
                   ) : c.type === "select" ? (
-                    <select className="ap-input" value={form[c.key] || ""} onChange={(e) => setField(c.key, e.target.value)}>
-                      <option value="">Select…</option>
-                      {(c.key === "class" ? classes : c.key === "subject" ? subjectsFor(form.class) : c.options || []).map((o) => (
-                        <option key={o} value={o}>{o}</option>
-                      ))}
-                    </select>
+                    <div>
+                      {config.multiClass && c.key === "class" ? (
+                        <div className="sa-chips tight">
+                          {classes.map((cls) => {
+                            const on = selectedClasses.includes(cls);
+                            return (
+                              <button
+                                key={cls}
+                                type="button"
+                                className={`sa-chip ${on ? "on" : ""}`}
+                                onClick={() => {
+                                  setSelectedClasses((prev) =>
+                                    prev.includes(cls) ? prev.filter((x) => x !== cls) : [...prev, cls]
+                                  );
+                                }}
+                              >
+                                {cls}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <select className="ap-input" value={form[c.key] || ""} onChange={(e) => setField(c.key, e.target.value)}>
+                          <option value="">Select…</option>
+                          {(c.key === "class" ? classes : c.key === "subject" ? (config.multiClass
+                            ? subjectsForAll(selectedClasses) || []
+                            : subjectsFor(form.class)) : c.options || []).map((o) => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                   ) : c.type === "file" ? (
                     <div>
                       <FileDrop
